@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main, dev]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  balance:
+    name: Balance simulator
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Simulator runs
+        run: python3 tools/simulate.py --runs 200
+      - name: DESIGN.md balance table matches the simulator
+        run: python3 tools/check_balance.py
+
+  build:
+    name: Gradle build (Java 8)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check for Gradle project
+        id: gradle
+        run: |
+          if [ -f gradlew ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No gradlew yet, skipping the build. It runs once the Gradle project is added."
+          fi
+      - uses: actions/setup-java@v4
+        if: steps.gradle.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: "8"
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.gradle.outputs.present == 'true'
+      - name: Build
+        if: steps.gradle.outputs.present == 'true'
+        run: |
+          chmod +x gradlew
+          ./gradlew build --no-daemon
+      - uses: actions/upload-artifact@v4
+        if: steps.gradle.outputs.present == 'true'
+        with:
+          name: unrest-jar
+          path: build/libs/*.jar
+          if-no-files-found: error
