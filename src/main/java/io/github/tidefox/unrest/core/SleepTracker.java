@@ -221,7 +221,13 @@ public final class SleepTracker {
                     break;
                 }
             }
-            if (allWoken && UnrestConfig.enabled) {
+            // Vanilla's skip lands on the next morning (time of day 0, then +1 for
+            // the tick), or leaves the time alone with doDaylightCycle off. Other
+            // wake-ups that look the same, such as a Comforts hammock nap ending
+            // at dusk, must not count as a night skip.
+            long todNow = world.getWorldTime() % 24000L;
+            boolean morning = todNow <= 1 || !world.getGameRules().getBoolean("doDaylightCycle");
+            if (allWoken && morning && UnrestConfig.enabled) {
                 long ticks = Math.max(0, world.getWorldTime() - timeAtTickStart - 1);
                 onVanillaSkip(world, ticks, asleepAtTickStart);
             }

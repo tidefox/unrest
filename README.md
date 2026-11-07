@@ -36,6 +36,19 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 Don't run Unrest alongside another server mod that changes how nights are skipped.
 
+### Compatibility notes
+
+- **Quark:** turn off its *Improved Sleeping* tweak (`config/quark.cfg`,
+  `tweaks` → `B:"Improved Sleeping"=false`). Otherwise Quark skips the night
+  itself once every non-AFK player is in bed, and Unrest logs that as an
+  `external` time change with no hunger cost or Unrest update.
+- **Comforts:** sleeping bags count as beds. A daytime hammock nap that ends at
+  dusk isn't treated as a night skip.
+- **Bloodmoon:** players can't sleep during a blood moon, so that night usually
+  ends on its own and lowers Unrest by `naturalNightRelief`.
+- **GlobalGameRules / `doDaylightCycle false`:** skips wake sleepers without
+  moving the clock, as in vanilla.
+
 ## Commands
 
 | Command | Who | What it does |
