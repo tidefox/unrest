@@ -46,8 +46,8 @@ public final class BossbarDisplay {
     }
 
     public void hide() {
-        if (!bar.getPlayers().isEmpty()) {
-            bar.removeAllPlayers();
+        for (EntityPlayerMP p : new ArrayList<>(bar.getPlayers())) {
+            bar.removePlayer(p);
         }
     }
 
