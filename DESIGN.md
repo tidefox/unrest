@@ -62,7 +62,8 @@ T(r) = min(T(r), CAP)                    CAP  = 520s
 | 1 of 2 | 1m 30s |
 | 1 of 3 | 2m 30s |
 | 1 of 4 | 3m 30s |
-| 1 of 8 or more | 8m 40s (cap) |
+| 1 of 8 | 7m 30s |
+| 1 of 10 or more | 8m 40s (cap) |
 
 A night lasts about 546 seconds. So a lone sleeper on a large server only
 skips the last few seconds of the night, and only if they went to bed at dusk.

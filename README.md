@@ -8,7 +8,7 @@ on a busy server can still bring the dawn, but it takes almost the whole night.
 Each night has a randomly rolled character. Skipping without the whole server
 asleep builds **Unrest**, which makes later nights harder to skip.
 
-> **Status:** design complete, implementation in progress. See [DESIGN.md](DESIGN.md).
+> **Status:** v1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
 
 ## Features (v1)
 
@@ -61,7 +61,9 @@ python3 tools/simulate.py --runs 4000
 ./gradlew build
 ```
 
-The jar is written to `build/libs/`. The Gradle project setup is still to come.
+Gradle 4.10.3 (through the wrapper) and ForgeGradle 3 need **Java 8**. The
+reobfuscated jar is written to `build/libs/`. `./gradlew test` runs the unit
+tests for the meter maths, and `./gradlew runServer` starts a dev server in `run/`.
 
 ## Development
 
@@ -77,8 +79,8 @@ and `dev`:
   `tools/check_balance.py` that the table in DESIGN.md §12 still matches it.
   If you change the meter maths, regenerate the table with
   `python3 tools/simulate.py` and paste it into DESIGN.md.
-- **Gradle build (Java 8).** Runs `./gradlew build` and uploads the jar. It is
-  skipped until the Gradle project is added.
+- **Gradle build (Java 8).** Runs `./gradlew build`, which compiles the mod and
+  runs the unit tests, then uploads the jar.
 
 ## Licence
 

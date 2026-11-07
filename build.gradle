@@ -1,0 +1,67 @@
+buildscript {
+    repositories {
+        maven { url = 'https://maven.minecraftforge.net' }
+        mavenCentral()
+    }
+    dependencies {
+        classpath group: 'net.minecraftforge.gradle', name: 'ForgeGradle', version: '3.+', changing: true
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle'
+
+version = project.mod_version
+group = 'io.github.tidefox.unrest'
+archivesBaseName = 'unrest'
+
+sourceCompatibility = targetCompatibility = compileJava.sourceCompatibility = compileJava.targetCompatibility = '1.8'
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+minecraft {
+    mappings channel: 'snapshot', version: '20171003-1.12'
+
+    runs {
+        server {
+            workingDirectory project.file('run')
+            property 'forge.logging.console.level', 'debug'
+        }
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${project.forge_version}"
+    testImplementation 'junit:junit:4.12'
+}
+
+processResources {
+    inputs.property 'version', project.version
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version': project.version
+    }
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+jar {
+    manifest {
+        attributes([
+            'Specification-Title'     : 'unrest',
+            'Specification-Vendor'    : 'tidefox',
+            'Specification-Version'   : '1',
+            'Implementation-Title'    : project.name,
+            'Implementation-Version'  : "${version}",
+            'Implementation-Vendor'   : 'tidefox',
+        ])
+    }
+}
+
+jar.finalizedBy('reobfJar')
