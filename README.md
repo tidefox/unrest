@@ -63,6 +63,23 @@ python3 tools/simulate.py --runs 4000
 
 The jar is written to `build/libs/`. The Gradle project setup is still to come.
 
+## Development
+
+| Branch | Purpose |
+|---|---|
+| `main` | Released, stable code. Only takes merges from `dev` (or hotfixes). |
+| `dev` | Integration branch. Feature branches are merged here through pull requests. |
+
+CI (`.github/workflows/ci.yml`) runs on every push and pull request to `main`
+and `dev`:
+
+- **Balance simulator.** Runs `tools/simulate.py` and checks with
+  `tools/check_balance.py` that the table in DESIGN.md §12 still matches it.
+  If you change the meter maths, regenerate the table with
+  `python3 tools/simulate.py` and paste it into DESIGN.md.
+- **Gradle build (Java 8).** Runs `./gradlew build` and uploads the jar. It is
+  skipped until the Gradle project is added.
+
 ## Licence
 
 [MIT](LICENSE)
