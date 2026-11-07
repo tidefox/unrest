@@ -95,6 +95,7 @@ public final class SleepTracker {
     private final Set<UUID> quietWake = new HashSet<>();
     private Night night;
     private long concludedDay = -1;
+    private int lastPlayersOnline;
 
     private int tickCounter;
     private long timeAtTickStart;
@@ -392,8 +393,14 @@ public final class SleepTracker {
                 now.add(p.getUniqueID());
             }
         }
+        boolean joined = census.playersOnline > lastPlayersOnline;
+        lastPlayersOnline = census.playersOnline;
         if (now.equals(shownSleepers)) {
             quietWake.clear();
+            if (joined) {
+                // Someone new joined: their client hasn't seen the tags yet.
+                refreshTabList(shownSleepers);
+            }
             return;
         }
         Set<UUID> changed = new HashSet<>();
@@ -419,16 +426,21 @@ public final class SleepTracker {
         }
         quietWake.clear();
         shownSleepers = now;
+        if (joined) {
+            changed.addAll(now);
+        }
         refreshTabList(changed);
     }
 
     private void refreshTabList(Set<UUID> ids) {
+        List<EntityPlayerMP> players = new ArrayList<>();
         for (UUID id : ids) {
             EntityPlayerMP p = server.getPlayerList().getPlayerByUUID(id);
             if (p != null) {
-                TabListDisplay.refresh(p);
+                players.add(p);
             }
         }
+        TabListDisplay.update(server, players, shownSleepers);
     }
 
     // ---- the meter ----

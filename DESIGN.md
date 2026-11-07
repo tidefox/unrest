@@ -220,7 +220,7 @@ last-activity time is kept in memory only.
 | **Chat: into or out of bed** | Everyone in the Overworld | `Steve lies down (3/7) — dawn in ~1:20`. Hovering over it lists who is asleep and who is awake. |
 | **Chat: events** | Everyone in the Overworld | The night roll, Nightmare wake-ups, and the skip summary. |
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
-| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, using `PlayerEvent.TabListNameFormat` and `refreshTabListName()`. No scoreboard teams are used. |
+| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
 | **Sound** | Overworld players | A soft chime when the meter passes 50 % and 90 %. |
 

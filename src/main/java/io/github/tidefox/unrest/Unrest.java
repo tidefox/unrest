@@ -5,7 +5,6 @@ import io.github.tidefox.unrest.config.ConfigLoader;
 import io.github.tidefox.unrest.config.UnrestConfig;
 import io.github.tidefox.unrest.core.ActivityTracker;
 import io.github.tidefox.unrest.core.SleepTracker;
-import io.github.tidefox.unrest.display.TabListDisplay;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.event.FMLPreInitializationEvent;
@@ -27,7 +26,6 @@ public final class Unrest {
 
     private static SleepTracker tracker;
     private static ActivityTracker activity;
-    private static TabListDisplay tabList;
 
     public static SleepTracker tracker() {
         return tracker;
@@ -42,10 +40,8 @@ public final class Unrest {
     public void serverStarting(FMLServerStartingEvent e) {
         activity = new ActivityTracker();
         tracker = new SleepTracker(e.getServer(), activity);
-        tabList = new TabListDisplay();
         MinecraftForge.EVENT_BUS.register(activity);
         MinecraftForge.EVENT_BUS.register(tracker);
-        MinecraftForge.EVENT_BUS.register(tabList);
         e.registerServerCommand(new UnrestCommand(UnrestConfig.registerSleepAlias));
         LOG.info("Unrest started in {} mode.", UnrestConfig.mode.id());
     }
@@ -59,11 +55,7 @@ public final class Unrest {
         if (activity != null) {
             MinecraftForge.EVENT_BUS.unregister(activity);
         }
-        if (tabList != null) {
-            MinecraftForge.EVENT_BUS.unregister(tabList);
-        }
         tracker = null;
         activity = null;
-        tabList = null;
     }
 }
