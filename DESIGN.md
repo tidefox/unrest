@@ -94,7 +94,7 @@ happens on every night type, including Haunted
 
 ### 2.4 The skip
 
-1. `world.setWorldTime(t + 24000 − (t % 24000))`, which jumps to the next morning.
+1. `world.setWorldTime(t + 24000 − (t % 24000))`, which jumps to the next morning. Like vanilla, this step is skipped when the `doDaylightCycle` gamerule is off; the sleepers are still woken and the night still counts as skipped.
 2. `world.provider.resetRainAndThunder()`.
 3. For each player in bed in the Overworld, call `player.wakeUpPlayer(false, false, true)`.
 4. Apply the hunger cost to sleepers (§5).
@@ -195,7 +195,7 @@ turned off with `hungerCost.enabled`.
 - **Activity** is any of the following:
   - changing the direction the player is looking (yaw or pitch)
   - swinging an arm or attacking
-  - breaking or using a block, or using an item
+  - breaking or using a block, or using an item (right-clicking a bed doesn't count, because that is how a player gets into bed)
   - chatting or running a command
   - opening a container
 - **Moving on its own doesn't count**, so water currents and being pushed don't make a player active.
@@ -349,8 +349,10 @@ playersOnline,countedN,sleepersAtSkip,ratioAtSkip,afkCount,peakSleepers,
 nightmares,hungerLostTotal
 ```
 
-`outcome` is one of `whole_server`, `partial`, `natural` or `vanilla_skip`.
-`vanilla_skip` is only used in `observe` mode.
+`outcome` is one of `whole_server`, `partial`, `natural`, `vanilla_skip` or
+`external`. `vanilla_skip` is only used in `observe` mode. `external` means
+something else moved the time out of the night (for example `/time set day`):
+the night ends with no skip, no hunger cost and no change to Unrest.
 
 ---
 

@@ -16,11 +16,18 @@ public final class SkipHandler {
 
     private SkipHandler() {}
 
-    /** Jumps to the next morning, clears the weather and wakes everyone in bed. Returns the ticks skipped. */
+    /**
+     * Jumps to the next morning, clears the weather and wakes everyone in bed.
+     * Returns the ticks skipped. Like vanilla, the time is left alone when
+     * {@code doDaylightCycle} is off; the sleepers are still woken.
+     */
     public static long jumpToMorning(WorldServer world) {
         long t = world.getWorldTime();
-        long jump = 24000L - (t % 24000L);
-        world.setWorldTime(t + jump);
+        long jump = 0;
+        if (world.getGameRules().getBoolean("doDaylightCycle")) {
+            jump = 24000L - (t % 24000L);
+            world.setWorldTime(t + jump);
+        }
         world.provider.resetRainAndThunder();
         for (EntityPlayer p : new ArrayList<>(world.playerEntities)) {
             if (p.isPlayerSleeping()) {

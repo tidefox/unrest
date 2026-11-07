@@ -42,7 +42,9 @@ public final class SleepTracker {
     }
 
     public enum Outcome {
-        WHOLE_SERVER("whole_server"), PARTIAL("partial"), NATURAL("natural"), VANILLA_SKIP("vanilla_skip");
+        WHOLE_SERVER("whole_server"), PARTIAL("partial"), NATURAL("natural"), VANILLA_SKIP("vanilla_skip"),
+        /** The time was changed by something else, such as {@code /time set}. */
+        EXTERNAL("external");
 
         public final String id;
 
@@ -95,7 +97,8 @@ public final class SleepTracker {
     private final Set<UUID> quietWake = new HashSet<>();
     private Night night;
     private long concludedDay = -1;
-    private int lastPlayersOnline;
+    private Set<UUID> lastOnline = new HashSet<>();
+    private long timeAtTickEnd = -1;
 
     private int tickCounter;
     private long timeAtTickStart;
@@ -202,6 +205,11 @@ public final class SleepTracker {
         WorldServer world = (WorldServer) e.world;
         if (e.phase == TickEvent.Phase.START) {
             timeAtTickStart = world.getWorldTime();
+            // Nothing in vanilla changes the time between two world ticks, so a
+            // difference here comes from a command or another mod.
+            if (timeAtTickEnd >= 0 && timeAtTickStart != timeAtTickEnd && UnrestConfig.enabled) {
+                onExternalTimeChange(world, timeAtTickStart);
+            }
             asleepAtTickStart = vanillaWouldSkip(world);
             return;
         }
@@ -223,6 +231,38 @@ public final class SleepTracker {
             tickCounter = 0;
             secondTick(world);
         }
+        timeAtTickEnd = world.getWorldTime();
+    }
+
+    /**
+     * The time was set from outside (e.g. {@code /time set day}). If it is no
+     * longer the same night, the night ends without a skip and without the
+     * natural-night relief, and is logged as {@code external}.
+     */
+    private void onExternalTimeChange(WorldServer world, long time) {
+        if (night == null) {
+            return;
+        }
+        UnrestWorldData data = UnrestWorldData.get(world);
+        long tod = time % 24000L;
+        boolean sameNight = !night.storm && time / 24000L == night.day && tod >= NIGHT_START && tod <= NIGHT_END;
+        if (sameNight) {
+            return;
+        }
+        if (!night.storm) {
+            NightLog.Entry e = baseEntry(night, Outcome.EXTERNAL, data.getDebt());
+            e.sleepersAtSkip = census.sleepers.size();
+            e.ratioAtSkip = census.ratio();
+            log.write(e);
+            concludedDay = night.day;
+        }
+        night = null;
+        data.setMeter(0);
+        resetMeterState();
+        bossbar.hide();
+        Set<UUID> old = shownSleepers;
+        shownSleepers = new HashSet<>();
+        refreshTabList(old);
     }
 
     /** The players vanilla is about to wake if every non-spectator in the Overworld is fully asleep, else empty. */
@@ -393,8 +433,12 @@ public final class SleepTracker {
                 now.add(p.getUniqueID());
             }
         }
-        boolean joined = census.playersOnline > lastPlayersOnline;
-        lastPlayersOnline = census.playersOnline;
+        Set<UUID> online = new HashSet<>();
+        for (EntityPlayerMP p : server.getPlayerList().getPlayers()) {
+            online.add(p.getUniqueID());
+        }
+        boolean joined = !lastOnline.containsAll(online);
+        lastOnline = online;
         if (now.equals(shownSleepers)) {
             quietWake.clear();
             if (joined) {

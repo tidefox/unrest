@@ -1,6 +1,7 @@
 package io.github.tidefox.unrest.core;
 
 import io.github.tidefox.unrest.config.UnrestConfig;
+import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.event.CommandEvent;
@@ -102,6 +103,12 @@ public final class ActivityTracker {
 
     @SubscribeEvent(priority = EventPriority.LOWEST, receiveCanceled = true)
     public void onRightClickBlock(PlayerInteractEvent.RightClickBlock e) {
+        // Clicking a bed is how you get into it, so it must not count as being
+        // active before bed, or the rule would never stop anyone.
+        IBlockState state = e.getWorld().getBlockState(e.getPos());
+        if (state.getBlock().isBed(state, e.getWorld(), e.getPos(), e.getEntityPlayer())) {
+            return;
+        }
         markActive(e.getEntityPlayer());
     }
 
