@@ -8,7 +8,9 @@ on a busy server can still bring the dawn, but it takes almost the whole night.
 Each night has a randomly rolled character. Skipping without the whole server
 asleep builds **Unrest**, which makes later nights harder to skip.
 
-> **Status:** design complete, implementation in progress. See [DESIGN.md](DESIGN.md).
+> **Status:** v1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
+
+**Players and server admins:** see the [User Guide](docs/USER_GUIDE.md) for the game mechanics, commands and every config option.
 
 ## Features (v1)
 
@@ -36,6 +38,22 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 Don't run Unrest alongside another server mod that changes how nights are skipped.
 
+### Compatibility notes
+
+- **Quark:** works without changing its config. Quark's *Improved Sleeping*
+  changes vanilla's "everyone asleep" rule so AFK players don't count. Unrest
+  spots that skip and counts it from its own headcount (whole-server or partial),
+  so the hunger cost, Unrest and the log stay correct. The only setting that
+  matters is Quark's `Required Percentage`. At 100 (the default) its skips are
+  whole-server sleeps. Below 100 it skips before the meter fills, which Unrest
+  warns about in the server log at startup. Both mods post sleep messages in chat.
+- **Comforts:** sleeping bags count as beds. A daytime hammock nap that ends at
+  dusk isn't treated as a night skip.
+- **Bloodmoon:** players can't sleep during a blood moon, so that night usually
+  ends on its own and lowers Unrest by `naturalNightRelief`.
+- **GlobalGameRules / `doDaylightCycle false`:** skips wake sleepers without
+  moving the clock, as in vanilla.
+
 ## Commands
 
 | Command | Who | What it does |
@@ -61,7 +79,9 @@ python3 tools/simulate.py --runs 4000
 ./gradlew build
 ```
 
-The jar is written to `build/libs/`. The Gradle project setup is still to come.
+Gradle 4.10.3 (through the wrapper) and ForgeGradle 3 need **Java 8**. The
+reobfuscated jar is written to `build/libs/`. `./gradlew test` runs the unit
+tests for the meter maths, and `./gradlew runServer` starts a dev server in `run/`.
 
 ## Development
 
@@ -77,8 +97,8 @@ and `dev`:
   `tools/check_balance.py` that the table in DESIGN.md §12 still matches it.
   If you change the meter maths, regenerate the table with
   `python3 tools/simulate.py` and paste it into DESIGN.md.
-- **Gradle build (Java 8).** Runs `./gradlew build` and uploads the jar. It is
-  skipped until the Gradle project is added.
+- **Gradle build (Java 8).** Runs `./gradlew build`, which compiles the mod and
+  runs the unit tests, then uploads the jar.
 
 ## Licence
 

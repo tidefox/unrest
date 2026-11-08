@@ -62,7 +62,8 @@ T(r) = min(T(r), CAP)                    CAP  = 520s
 | 1 of 2 | 1m 30s |
 | 1 of 3 | 2m 30s |
 | 1 of 4 | 3m 30s |
-| 1 of 8 or more | 8m 40s (cap) |
+| 1 of 8 | 7m 30s |
+| 1 of 10 or more | 8m 40s (cap) |
 
 A night lasts about 546 seconds. So a lone sleeper on a large server only
 skips the last few seconds of the night, and only if they went to bed at dusk.
@@ -93,7 +94,7 @@ happens on every night type, including Haunted
 
 ### 2.4 The skip
 
-1. `world.setWorldTime(t + 24000 − (t % 24000))`, which jumps to the next morning.
+1. `world.setWorldTime(t + 24000 − (t % 24000))`, which jumps to the next morning. Like vanilla, this step is skipped when the `doDaylightCycle` gamerule is off; the sleepers are still woken and the night still counts as skipped.
 2. `world.provider.resetRainAndThunder()`.
 3. For each player in bed in the Overworld, call `player.wakeUpPlayer(false, false, true)`.
 4. Apply the hunger cost to sleepers (§5).
@@ -109,6 +110,12 @@ second-tick after the jump, `PlayerWakeUpEvent` has fired and
 `worldTime % 24000` has dropped below the previous value. The mod then runs
 steps 4–6 as a whole-server sleep, so the hunger cost, Unrest and the log stay
 correct.
+
+The mod recognises this skip by what it does (the sleepers are woken during the
+world tick and the time lands on the next morning), not by vanilla's own rule,
+because other mods can change that rule. Quark's *Improved Sleeping*, for
+example, leaves AFK players out. The outcome is then worked out from the mod's
+own S and N: whole-server if `S ≥ N`, otherwise partial.
 
 ---
 
@@ -194,7 +201,7 @@ turned off with `hungerCost.enabled`.
 - **Activity** is any of the following:
   - changing the direction the player is looking (yaw or pitch)
   - swinging an arm or attacking
-  - breaking or using a block, or using an item
+  - breaking or using a block, or using an item (right-clicking a bed doesn't count, because that is how a player gets into bed)
   - chatting or running a command
   - opening a container
 - **Moving on its own doesn't count**, so water currents and being pushed don't make a player active.
@@ -219,7 +226,7 @@ last-activity time is kept in memory only.
 | **Chat: into or out of bed** | Everyone in the Overworld | `Steve lies down (3/7) — dawn in ~1:20`. Hovering over it lists who is asleep and who is awake. |
 | **Chat: events** | Everyone in the Overworld | The night roll, Nightmare wake-ups, and the skip summary. |
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
-| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, using `PlayerEvent.TabListNameFormat` and `refreshTabListName()`. No scoreboard teams are used. |
+| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
 | **Sound** | Overworld players | A soft chime when the meter passes 50 % and 90 %. |
 
@@ -348,8 +355,10 @@ playersOnline,countedN,sleepersAtSkip,ratioAtSkip,afkCount,peakSleepers,
 nightmares,hungerLostTotal
 ```
 
-`outcome` is one of `whole_server`, `partial`, `natural` or `vanilla_skip`.
-`vanilla_skip` is only used in `observe` mode.
+`outcome` is one of `whole_server`, `partial`, `natural`, `vanilla_skip` or
+`external`. `vanilla_skip` is only used in `observe` mode. `external` means
+something else moved the time out of the night (for example `/time set day`):
+the night ends with no skip, no hunger cost and no change to Unrest.
 
 ---
 
