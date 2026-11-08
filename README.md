@@ -10,6 +10,8 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 > **Status:** v1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
 
+**Players and server admins:** see the [User Guide](docs/USER_GUIDE.md) for the game mechanics, commands and every config option.
+
 ## Features (v1)
 
 - **Sleep meter.** The time to dawn depends on the share of players asleep. With everyone asleep it takes 5 seconds; with half the server asleep it takes about 1½ minutes; with only a few asleep it takes most of the night.
