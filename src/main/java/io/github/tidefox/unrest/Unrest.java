@@ -2,6 +2,7 @@ package io.github.tidefox.unrest;
 
 import io.github.tidefox.unrest.command.UnrestCommand;
 import io.github.tidefox.unrest.config.ConfigLoader;
+import io.github.tidefox.unrest.config.QuarkCheck;
 import io.github.tidefox.unrest.config.UnrestConfig;
 import io.github.tidefox.unrest.core.ActivityTracker;
 import io.github.tidefox.unrest.core.SleepTracker;
@@ -43,6 +44,7 @@ public final class Unrest {
         MinecraftForge.EVENT_BUS.register(activity);
         MinecraftForge.EVENT_BUS.register(tracker);
         e.registerServerCommand(new UnrestCommand(UnrestConfig.registerSleepAlias));
+        QuarkCheck.run();
         LOG.info("Unrest started in {} mode.", UnrestConfig.mode.id());
     }
 

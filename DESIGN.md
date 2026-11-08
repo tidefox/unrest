@@ -111,6 +111,12 @@ second-tick after the jump, `PlayerWakeUpEvent` has fired and
 steps 4–6 as a whole-server sleep, so the hunger cost, Unrest and the log stay
 correct.
 
+The mod recognises this skip by what it does (the sleepers are woken during the
+world tick and the time lands on the next morning), not by vanilla's own rule,
+because other mods can change that rule. Quark's *Improved Sleeping*, for
+example, leaves AFK players out. The outcome is then worked out from the mod's
+own S and N: whole-server if `S ≥ N`, otherwise partial.
+
 ---
 
 ## 3. Night types and Unrest

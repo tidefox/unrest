@@ -38,10 +38,13 @@ Don't run Unrest alongside another server mod that changes how nights are skippe
 
 ### Compatibility notes
 
-- **Quark:** turn off its *Improved Sleeping* tweak (`config/quark.cfg`,
-  `tweaks` → `B:"Improved Sleeping"=false`). Otherwise Quark skips the night
-  itself once every non-AFK player is in bed, and Unrest logs that as an
-  `external` time change with no hunger cost or Unrest update.
+- **Quark:** works without changing its config. Quark's *Improved Sleeping*
+  changes vanilla's "everyone asleep" rule so AFK players don't count. Unrest
+  spots that skip and counts it from its own headcount (whole-server or partial),
+  so the hunger cost, Unrest and the log stay correct. The only setting that
+  matters is Quark's `Required Percentage`. At 100 (the default) its skips are
+  whole-server sleeps. Below 100 it skips before the meter fills, which Unrest
+  warns about in the server log at startup. Both mods post sleep messages in chat.
 - **Comforts:** sleeping bags count as beds. A daytime hammock nap that ends at
   dusk isn't treated as a night skip.
 - **Bloodmoon:** players can't sleep during a blood moon, so that night usually
