@@ -10,6 +10,8 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 > **Status:** v1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
 
+**Players and server admins:** see the [User Guide](docs/USER_GUIDE.md) for the game mechanics, commands and every config option.
+
 ## Features (v1)
 
 - **Sleep meter.** The time to dawn depends on the share of players asleep. With everyone asleep it takes 5 seconds; with half the server asleep it takes about 1½ minutes; with only a few asleep it takes most of the night.
@@ -35,6 +37,22 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 3. Adjust the config if you want to, then run `/unrest reload`.
 
 Don't run Unrest alongside another server mod that changes how nights are skipped.
+
+### Compatibility notes
+
+- **Quark:** works without changing its config. Quark's *Improved Sleeping*
+  changes vanilla's "everyone asleep" rule so AFK players don't count. Unrest
+  spots that skip and counts it from its own headcount (whole-server or partial),
+  so the hunger cost, Unrest and the log stay correct. The only setting that
+  matters is Quark's `Required Percentage`. At 100 (the default) its skips are
+  whole-server sleeps. Below 100 it skips before the meter fills, which Unrest
+  warns about in the server log at startup. Both mods post sleep messages in chat.
+- **Comforts:** sleeping bags count as beds. A daytime hammock nap that ends at
+  dusk isn't treated as a night skip.
+- **Bloodmoon:** players can't sleep during a blood moon, so that night usually
+  ends on its own and lowers Unrest by `naturalNightRelief`.
+- **GlobalGameRules / `doDaylightCycle false`:** skips wake sleepers without
+  moving the clock, as in vanilla.
 
 ## Commands
 
