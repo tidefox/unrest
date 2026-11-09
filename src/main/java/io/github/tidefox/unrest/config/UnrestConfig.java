@@ -115,18 +115,18 @@ public final class UnrestConfig {
     public static double tensionPerBadRoll = 1.0;
     public static double tensionMax = 5.0;
     /** Meter added per point of tension when a Deep roll releases it. */
-    public static double tensionPayout = 0.08;
+    public static double tensionPayout = 0.05;
     public static boolean chainEnabled = true;
     /** Deep rolls in a row count 2x, 3x, 4x… up to this. */
     public static double chainMaxWeight = 4.0;
     /** Restless rolls in a row that turn into a Night terror (0 = never). */
     public static int nightTerrorStreak = 3;
     /** Luck points the rubber band adds at most when the meter lags (and takes when it leads). 0 = off. */
-    public static double rubberBand = 2.0;
+    public static double rubberBand = 1.0;
     public static boolean doubleOrNothing = true;
     public static double gambleAt = 0.5;
     public static int gambleCountdownSeconds = 5;
-    public static double gambleWinMeter = 0.9;
+    public static double gambleWinMeter = 0.75;
     public static double gambleLoseMeter = 0.25;
     /** Win chance added per point of Luck, around 50%. */
     public static double gambleLuck = 0.05;

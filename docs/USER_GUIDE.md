@@ -85,10 +85,10 @@ sooner.
 |---|---|
 | everyone | 5 seconds |
 | 3 of 4 | about 0:27 |
-| 1 of 2 | about 0:40 |
-| 1 of 3 | about 1:00 |
-| 1 of 4 | about 1:12 |
-| 1 of 8 or fewer | about 1:30, never more than 2:00 |
+| 1 of 2 | about 0:39 |
+| 1 of 3 | about 0:54 |
+| 1 of 4 | about 1:04 |
+| 1 of 8 or fewer | about 1:20, never more than 2:00 |
 
 These include dream luck and the mix of night types; higher Unrest makes
 them longer, up to the 2-minute limit (see DESIGN.md §12 for the full table). A night lasts about
@@ -132,11 +132,24 @@ creative players don't count.
 | Night | Chance at Unrest 0 | Chance at Unrest 5 | Meter speed | Special rule |
 |---|---|---|---|---|
 | **Calm** | 25% | 5% | ×1.3 | — |
-| **Normal** | 45% | 30% | ×1.0 | — |
+| **Normal** | 40% | 25% | ×1.0 | — |
 | **Restless** | 22% | 42% | ×0.7 | — |
 | **Haunted** | 8% | 23% | ×0.6 | With **under half** of the counted players asleep, the meter fills at half that speed again (×0.3) |
+| **Fever Dream** | 5% (10% on a full moon) | 5% | ×1.0 | Dreams roll every 3–7 seconds and hit **three times as hard**: Deep counts 4×, a chain up to 6×, Restless counts 0×. Tension builds twice as fast |
 
 A whole-server sleep still skips a Haunted night (this can be turned off).
+
+A **Fever Dream** is always announced, with thunder (harmless lightning), and
+its bossbar flashes purple and pink:
+*✧ The air shimmers. A fever dream takes hold… Dreams come fast and wild tonight.*
+
+### The moon
+
+The moon phase colours every dream of the night. A **full moon** makes
+dreams wild: Deep sleep and bad dreams both get likelier, and a Fever Dream
+twice as likely. A **new moon** makes them calm and steady. The phases in
+between are in between. The bossbar shows the current phase (🌕 🌖 🌗 🌘 🌑 🌒 🌓 🌔)
+and `/unrest info` names it.
 
 Chat messages at dusk, only if `indicators.announceNight` is on (it is off by default):
 
@@ -172,45 +185,87 @@ that are hard to skip, until everyone sleeps together or lets a night pass.
 
 ## 6. Dreams and Nightmares
 
-Every 15 seconds the sleepers dream **together**: one shared roll decides how
-much every sleeper counts towards the meter for the next 15 seconds. A good
-roll speeds everyone up; a bad one slows everyone down.
+The sleepers dream **together**. At random moments (every 8 to 22 seconds,
+the first one 2 seconds after someone falls asleep) they make one shared
+roll, which decides how much every sleeper counts towards the meter until
+the next one. A good roll speeds everyone up; a bad one slows everyone down.
 
-| Dream | Chance | Effect on everyone asleep |
+### The roll
+
+The roll is a number from **0 to 100**, and high is good:
+
+| Number (half the server asleep) | Dream | Effect on everyone asleep |
 |---|---|---|
-| **Nightmare** | `6% × (1 − r) × (1 + 0.3 × Unrest)`, less with Luck | The meter loses 10%, and the **unluckiest** sleeper wakes up |
-| **Restless** | `30% − 20% × r + 3% × Unrest`, less with Luck | Each sleeper counts as ½ |
-| **Deep** | `10% + 20% × r − 2% × Unrest + 4% × Luck` (at least 5%) | Each sleeper counts as 2 |
-| **Normal** | the rest | Each sleeper counts as 1 |
+| 80–100 | **Deep** | Each sleeper counts as 2 (more in a chain) |
+| 23–79 | **Sound** | Each sleeper counts as 1 |
+| 3–22 | **Restless** | Each sleeper counts as ½ |
+| 0–2 | **Nightmare** | The meter loses 10%, the **unluckiest** sleeper wakes up, and the Reaper may come for an awake player |
+
+The bands move: more sleepers widen Deep; Unrest widens the bad bands; Luck
+and the moon move them too.
+
+**It's a show.** A second before each roll, sleepers see a number spinning
+across the screen with a rising click, then the real number lands, coloured
+by the result, with a sound: a level-up for Deep (a fanfare for a chain or a
+jackpot), a bass note for Restless, a wither groan for a Nightmare. Land within
+3 of a band and it says *so close!* Set `dreams.spin=all` to show it to
+everyone in the Overworld, or `off`.
 
 **Luck matters.** The roll uses the sleepers' combined vanilla **Luck**: each
 level of a *Potion of Luck* is +1, each level of *Bad Luck* is −1, and modded
 items that add Luck count too (up to ±5 in total). Every point of Luck adds 4%
 to Deep and takes 15% off the Restless and Nightmare chances; bad luck does the
-opposite. When a Nightmare hits, it wakes whoever has the lowest Luck. A
-group that drinks Luck before bed reaches the dawn about 15% sooner.
+opposite. When a Nightmare hits, it wakes whoever has the lowest Luck.
 
-More sleepers also make Deep sleep more likely and bad dreams less likely;
-more Unrest makes bad dreams more likely. A player woken by a Nightmare can
-get straight back into bed.
+### Momentum
+
+Bad luck builds toward a comeback, and good luck snowballs:
+
+- **Tension and release.** Each Restless or Nightmare roll stores 1 tension
+  (up to 5). The next Deep roll releases it all at once: **+5% dawn per
+  point**. *⚡ The tension breaks! +15%*, with thunder at 3 or more.
+- **Deep chains.** Deep rolls in a row count 2×, then 3×, then 4×.
+  *⛓ chain ×3*.
+- **Night terror.** Three Restless rolls in a row turn into a Nightmare, but
+  the next roll is a guaranteed Deep that releases all the stored tension.
+- **Rubber band.** While the meter only just leads the 2-minute line, the
+  sleepers get +1 Luck; when it's far ahead, −1.
+- **Double or nothing.** Once a night, when the meter passes 50%, everyone
+  sees a 5-second countdown, then a number from 1 to 100. **Win** (50%,
+  +5% per point of Luck, between 25% and 75%) and the dawn jumps to 75%;
+  **lose** and it falls back to 25%, but the ramp doubles for the rest of
+  the night. The 2-minute limit holds either way.
+
+The bossbar shows what's building: `⚡2` tension, `⛓×3` chain, `☠0:42` the
+Reaper, `🎲3` the countdown.
+
+### The Reaper
+
+A Nightmare sends the dream after the awake players. A wither skeleton
+called **☠ The Reaper**, carrying a hoe for a scythe and glowing, appears with a
+lightning flash near a random awake player and hunts them. **Kill it within
+60 seconds** and the dawn comes 20% closer; let it get away and it fades,
+taking 5% with it. It drops nothing. Only one hunts at a time, and none comes
+on Peaceful or when nobody is awake. Its hits inflict Wither, so on a
+hardcore world take it seriously. Turn it off with `reaper.enabled=false`.
+
+### In chat
+
+Each roll is announced as one coloured line:
+
+```
+💭 🎲 91 Steve and Alex sink into a deep sleep together. [each counts 3x] ⛓ chain ×2 ⚡ The tension breaks! +15% (luck +2)
+💭 🎲 1 A nightmare grips Steve and Alex! Alex wakes up in a cold sweat. [dawn −10%] ⚡ tension 3/5
+☠ Alex's nightmare breaks loose: the Reaper hunts Bob! Kill it within 60s: dawn +20%.
+```
+
+Deep is aqua, Sound gray, Restless yellow and a Nightmare red; the Luck tag is
+green or dark red. By default a roll is only announced when the dream changes,
+and Nightmares, chains, releases and Night terrors always are. Hover over the
+number to see the bands and what moved them, or over the `[effect]` to see each
+sleeper's Luck. `dreams.announce` can be `all` or `off` (Nightmares only).
 
 Dreams don't apply to a whole-server sleep.
-
-Each roll is announced in chat as one coloured line:
-
-```
-💭 Steve and Alex sink into a deep sleep together. [every sleeper counts 2x] (luck +2)
-💭 A nightmare grips Steve and Alex! Alex wakes up in a cold sweat. [dawn −10%, the unluckiest sleeper wakes]
-```
-
-Deep sleep is aqua, ordinary sleep gray, Restless yellow and a Nightmare red;
-the Luck tag is green or dark red. By default a roll is only announced when
-the dream changes (so a run of ordinary sleep stays quiet), and Nightmares
-always are. Hover over 💭 to see the odds of the next roll, or over the
-`[effect]` to see each sleeper's Luck. Set `dreams.announce` to `all` to hear
-every roll, or `off` to hear only Nightmares. The `/unrest` menu also shows
-the current dream, and hovering over the *night passes* message shows how
-many Deep, Restless and Nightmare dreams the night had.
 
 ---
 
@@ -343,20 +398,23 @@ except `registerSleepAlias`, which needs a restart.
 
 ### nights
 
-For each of `calm`, `normal`, `restless` and `haunted`:
+For each of `calm`, `normal`, `restless`, `haunted` and `fever`:
 
-| Key | Defaults (calm / normal / restless / haunted) | Meaning |
+| Key | Defaults (calm / normal / restless / haunted / fever) | Meaning |
 |---|---|---|
-| `<type>Weight` | 25 / 45 / 22 / 8 | Roll weight at Unrest 0 |
-| `<type>PerDebt` | −4 / −3 / +4 / +3 | Weight change per point of Unrest |
-| `<type>Min` | 5 / 20 / 0 / 0 | The lowest the weight can go |
-| `<type>Multiplier` | 1.3 / 1.0 / 0.7 / 0.6 | Meter speed on that night |
+| `<type>Weight` | 25 / 40 / 22 / 8 / 5 | Roll weight at Unrest 0 |
+| `<type>PerDebt` | −4 / −3 / +4 / +3 / 0 | Weight change per point of Unrest |
+| `<type>Min` | 5 / 20 / 0 / 0 / 0 | The lowest the weight can go |
+| `<type>Multiplier` | 1.3 / 1.0 / 0.7 / 0.6 / 1.0 | Meter speed on that night |
 
 | Key | Default | Meaning |
 |---|---|---|
 | `hauntedMinRatio` | `0.5` | Share of counted players asleep below which a Haunted night is slowed further |
 | `hauntedBelowRatioMultiplier` | `0.5` | Extra slow-down below `hauntedMinRatio`. `0` stops the meter filling (the old behaviour) |
 | `hauntedAllowsWholeServerSleep` | `true` | Whether a whole-server sleep skips a Haunted night |
+| `feverIntensity` | `3.0` | How many times as strong every dream effect is on a Fever Dream |
+| `feverRollMinSeconds`, `feverRollMaxSeconds` | 3, 7 | Gap between rolls on a Fever Dream |
+| `feverFullMoonBonus` | `2.0` | The Fever Dream weight is multiplied by this on a full moon |
 
 ### debt
 
@@ -372,7 +430,8 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | Key | Default | Meaning |
 |---|---|---|
 | `enabled` | `true` | Turns the shared dream roll off (every sleeper then counts as 1) |
-| `rollIntervalSeconds` | `15` | Seconds between rolls |
+| `rollMinSeconds`, `rollMaxSeconds` | 8, 22 | Each gap between rolls is random in this range |
+| `spin` | `sleepers` | Who sees the spinning number before each roll: `sleepers`, `all` or `off` |
 | `deepBase`, `deepPerRatio`, `deepPerDebt`, `deepMin` | 0.10, 0.20, −0.02, 0.05 | Deep chance = base + perRatio × r + perDebt × Unrest, at least min |
 | `restlessBase`, `restlessPerRatio`, `restlessPerDebt` | 0.30, −0.20, 0.03 | Restless chance, same shape (then scaled by Luck) |
 | `nightmareBase`, `nightmarePerDebt` | 0.06, 0.3 | Nightmare chance = base × (1 − r) × (1 + perDebt × Unrest) (then scaled by Luck) |
@@ -383,6 +442,41 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `luckMax` | `5.0` | Combined Luck counts up to this much either way |
 | `announce` | `changes` | The shared roll in chat: `off` (Nightmares only), `changes` (when the dream changes) or `all` |
 | `nightmareSound` | `true` | A quiet sound for the player a Nightmare wakes (needs `indicators.sounds`) |
+
+### momentum
+
+| Key | Default | Meaning |
+|---|---|---|
+| `tension` | `true` | Bad rolls store tension; the next Deep releases it |
+| `tensionPerBadRoll`, `tensionMax` | 1.0, 5.0 | Tension per bad roll, and the most stored |
+| `tensionPayout` | `0.05` | Meter added per point of tension released |
+| `chains` | `true` | Deep rolls in a row count 2×, 3×, 4× |
+| `chainMaxWeight` | `4.0` | The most a chain can count each sleeper |
+| `nightTerrorStreak` | `3` | Restless rolls in a row that become a Night terror (0 = never) |
+| `rubberBand` | `1.0` | Luck added while the meter rides the 2-minute line, taken when far ahead (0 = off) |
+| `doubleOrNothing` | `true` | The once-a-night flip |
+| `gambleAt` | `0.5` | Meter at which it starts |
+| `gambleCountdownSeconds` | `5` | Countdown before the flip |
+| `gambleWinMeter`, `gambleLoseMeter` | 0.75, 0.25 | Meter after a win, after a loss |
+| `gambleLuck` | `0.05` | Win chance per point of the sleepers' Luck |
+
+### moon
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | The moon phase affects the dreams |
+| `moonDeep` | `0.05` | Deep chance added on a full moon (taken on a new moon) |
+| `moonBad` | `0.25` | Share added to the bad chances on a full moon (taken on a new moon) |
+
+### reaper
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | A Nightmare sends the Reaper after an awake player |
+| `seconds` | `60` | How long it hunts before it fades |
+| `reward` | `0.20` | Meter added when a player kills it |
+| `penalty` | `0.05` | Meter lost when it fades unkilled |
+| `health` | `30.0` | Its health |
 
 ### nightWatch
 
@@ -435,7 +529,8 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `tabPrefix` | `§7[Zz]§r` | The tag text (`§` colour codes allowed) |
 | `particles` | `true` | Cloud puffs above sleepers |
 | `sounds` | `true` | Chimes at 50% and 90% |
-| `asciiOnly` | `false` | Replace 🌙 ☀ 💤 💭 ● with plain text |
+| `asciiOnly` | `false` | Replace 🌙 ☀ 💤 💭 ● 🎲 and the moon phases with plain text |
+| `lightning` | `true` | Harmless lightning (no fire, no damage) for jackpots, the Reaper and Fever Dreams |
 
 ### commands and logging
 

@@ -188,12 +188,12 @@ public class SleepMathTest {
 
     @Test
     public void rubberBandHelpsWhenBehindAndHurtsWhenFarAhead() {
-        // Riding the 2-minute line: +2 Luck.
-        assertEquals(2.0, SleepMath.rubberLuck(0.5, 60), EPS);
+        // Riding the 2-minute line: +1 Luck.
+        assertEquals(1.0, SleepMath.rubberLuck(0.5, 60), EPS);
         // A quarter ahead: neutral.
         assertEquals(0.0, SleepMath.rubberLuck(0.75, 60), EPS);
-        // Half or more ahead: −2 Luck.
-        assertEquals(-2.0, SleepMath.rubberLuck(0.9, 0), EPS);
+        // Half or more ahead: −1 Luck.
+        assertEquals(-1.0, SleepMath.rubberLuck(0.9, 0), EPS);
     }
 
     @Test

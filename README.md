@@ -4,7 +4,7 @@ A server-side sleep overhaul for hardcore **Minecraft 1.12.2 Forge** servers.
 
 The night no longer skips the moment enough players are in bed. Instead, a **sleep
 meter** fills, and it fills faster the more of the server is asleep. A lone sleeper
-on a busy server can still bring the dawn, but it takes almost the whole night.
+on a busy server still brings the dawn, but never takes more than 2 minutes.
 Each night has a randomly rolled character. Skipping without the whole server
 asleep builds **Unrest**, which makes later nights harder to skip.
 
@@ -16,9 +16,12 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 - **Sleep meter.** The time to dawn depends on the share of players asleep, and the meter speeds up the longer someone stays in bed. With everyone asleep it takes 5 seconds; with half the server asleep about 40 seconds; and nobody ever waits more than **2 minutes**.
 - **Night watch.** While someone sleeps, awake players bring the dawn closer by killing hostile mobs, mining and exploring new chunks, up to 20% each per night.
-- **Night types,** rolled at dusk: Calm, Normal, Restless or Haunted. A Haunted night is much slower unless at least half the server is in bed.
+- **Night types,** rolled at dusk: Calm, Normal, Restless, Haunted or Fever Dream. A Haunted night is much slower unless at least half the server is in bed.
 - **Unrest (Night Debt).** Partial skips build it up. A whole-server sleep, or a night that ends on its own with no skip, brings it down. Higher Unrest makes Restless and Haunted nights, and restless dreams, more likely.
-- **Shared dreams.** Every 15 seconds the sleepers roll together for Deep sleep, Restless sleep or a Nightmare, which then applies to all of them. Their combined vanilla **Luck** (Luck potions) improves the odds, and each roll gets a coloured line in chat.
+- **Shared dreams.** At random moments the sleepers roll together, 0 to 100, for Deep sleep, Restless sleep or a Nightmare, which then applies to all of them. The number spins across their screen before it lands. Their combined vanilla **Luck** (Luck potions) and the **moon phase** shift the odds, and each roll gets a coloured line in chat.
+- **Momentum.** Bad rolls store tension that the next Deep roll releases as a burst; Deep rolls chain up to 4×; three Restless rolls in a row become a Night terror; and once a night it's **double or nothing**.
+- **The Reaper.** A Nightmare sends a wither skeleton with a scythe after an awake player. Kill it in time and the dawn comes closer.
+- **Fever Dream** nights: rare, likelier under a full moon, with rolls every few seconds and every effect tripled.
 - **Sleeping costs food.** Sleepers wake hungrier the more hours the skip covered. A skip never takes anyone below 3 food points.
 - **AFK-aware.** AFK players don't count against the skip, and sleepers must have been active just before getting into bed.
 - **No dodging.** An awake player who logs out or hops to the Nether at night keeps counting as awake until they would have gone AFK, so leaving never speeds up the skip.

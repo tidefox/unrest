@@ -19,7 +19,7 @@ public class MomentumTest {
         assertEquals(2.0, m.tension(), EPS);
         Momentum.Step st = m.next(Dream.DEEP, false);
         assertEquals(2.0, st.released, EPS);
-        assertEquals(0.16, Momentum.burst(st.released), EPS);
+        assertEquals(0.10, Momentum.burst(st.released), EPS);
         assertEquals(0.0, m.tension(), EPS);
     }
 

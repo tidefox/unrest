@@ -149,20 +149,20 @@ public final class ConfigLoader {
                 "Restless and Nightmare rolls store tension; the next Deep roll releases it as a burst of meter");
         UnrestConfig.tensionPerBadRoll = d(MOMENTUM, "tensionPerBadRoll", 1.0, 0.0, 100.0, "Tension stored per bad roll");
         UnrestConfig.tensionMax = d(MOMENTUM, "tensionMax", 5.0, 0.0, 100.0, "Most tension that can be stored");
-        UnrestConfig.tensionPayout = d(MOMENTUM, "tensionPayout", 0.08, 0.0, 1.0, "Meter added per point of tension released");
+        UnrestConfig.tensionPayout = d(MOMENTUM, "tensionPayout", 0.05, 0.0, 1.0, "Meter added per point of tension released");
         UnrestConfig.chainEnabled = cfg.getBoolean("chains", MOMENTUM, true,
                 "Deep rolls in a row count 2x, then 3x, then 4x");
         UnrestConfig.chainMaxWeight = d(MOMENTUM, "chainMaxWeight", 4.0, 1.0, 100.0, "Most a Deep chain can count each sleeper");
         UnrestConfig.nightTerrorStreak = cfg.getInt("nightTerrorStreak", MOMENTUM, 3, 0, 100,
                 "This many Restless rolls in a row become a Night terror: a Nightmare, then a guaranteed Deep roll. 0 = never");
-        UnrestConfig.rubberBand = d(MOMENTUM, "rubberBand", 2.0, 0.0, 10.0,
+        UnrestConfig.rubberBand = d(MOMENTUM, "rubberBand", 1.0, 0.0, 10.0,
                 "Luck added when the meter lags behind the 2-minute line, taken when it leads by a lot. 0 = off");
         UnrestConfig.doubleOrNothing = cfg.getBoolean("doubleOrNothing", MOMENTUM, true,
                 "Once a night, when the meter passes gambleAt, a countdown and a coin flip: jump to gambleWinMeter or"
                         + " fall to gambleLoseMeter with the ramp doubled");
         UnrestConfig.gambleAt = d(MOMENTUM, "gambleAt", 0.5, 0.0, 1.0, "Meter at which double or nothing starts");
         UnrestConfig.gambleCountdownSeconds = cfg.getInt("gambleCountdownSeconds", MOMENTUM, 5, 0, 60, "Countdown before the flip");
-        UnrestConfig.gambleWinMeter = d(MOMENTUM, "gambleWinMeter", 0.9, 0.0, 1.0, "Meter after a win");
+        UnrestConfig.gambleWinMeter = d(MOMENTUM, "gambleWinMeter", 0.75, 0.0, 1.0, "Meter after a win");
         UnrestConfig.gambleLoseMeter = d(MOMENTUM, "gambleLoseMeter", 0.25, 0.0, 1.0, "Meter after a loss (the 2-minute limit still holds)");
         UnrestConfig.gambleLuck = d(MOMENTUM, "gambleLuck", 0.05, 0.0, 0.5, "Win chance added per point of the sleepers' Luck");
 
