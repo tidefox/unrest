@@ -42,15 +42,17 @@ public final class UnrestConfig {
     public static String difficultyPreset = "auto";
 
     // meter
-    public static double baseSeconds = 30.0;
-    public static double scaleSeconds = 60.0;
-    public static double capSeconds = 520.0;
+    public static double baseSeconds = 20.0;
+    public static double scaleSeconds = 40.0;
+    public static double capSeconds = 240.0;
     public static double wholeServerSeconds = 5.0;
     public static double drainPerSecond = 1.0 / 60.0;
     /** The fill speed doubles every this many seconds someone is asleep (0 = no ramp). */
-    public static double rampDoubleSeconds = 75.0;
+    public static double rampDoubleSeconds = 40.0;
     /** The ramp never speeds the meter up more than this. */
     public static double rampMax = 8.0;
+    /** Longest a partial skip can take while someone stays asleep (0 = no limit). */
+    public static double maxSleepSeconds = 120.0;
 
     // presets
     public static double easyScale = 0.5;
@@ -83,9 +85,18 @@ public final class UnrestConfig {
     public static double restlessBase = 0.30;
     public static double restlessPerRatio = -0.20;
     public static double restlessPerDebt = 0.03;
-    public static double nightmareBase = 0.03;
+    public static double nightmareBase = 0.06;
     public static double nightmarePerDebt = 0.3;
-    public static double nightmareMeterLoss = 0.05;
+    public static double nightmareMeterLoss = 0.10;
+    /** How much each sleeper counts on a Deep and on a Restless roll. */
+    public static double deepWeight = 2.0;
+    public static double restlessWeight = 0.5;
+    /** Deep chance added per point of the sleepers' combined Luck. */
+    public static double luckDeep = 0.04;
+    /** Share of the Restless and Nightmare chances removed per point of Luck. */
+    public static double luckBad = 0.15;
+    /** The combined Luck counts up to this much either way. */
+    public static double luckMax = 5.0;
     public static DreamAnnounce dreamAnnounce = DreamAnnounce.CHANGES;
     public static boolean nightmareSound = true;
 

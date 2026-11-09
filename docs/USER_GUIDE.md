@@ -49,7 +49,7 @@ it does nothing there except in singleplayer.
 2. **Players get into bed.** After the usual 5-second vanilla sleep timer they
    count as asleep, and the meter starts to fill.
 3. **The meter fills** at a speed set by how many players are asleep, the
-   night type, the difficulty preset and each sleeper's dreams. It speeds up
+   night type, the difficulty preset and the sleepers' shared dream. It speeds up
    the longer someone sleeps, and awake players add to it by keeping watch
    (fighting, mining, exploring).
 4. **At 100% the night is skipped.** Time jumps to the next morning, the
@@ -72,26 +72,26 @@ The time to fill the meter depends on the share of counted players asleep
 (`r = asleep / counted`):
 
 ```
-fill time = 30s + 60s × (1 − r) / r        capped at 520s
+fill time = 20s + 40s × (1 − r) / r        capped at 240s
 ```
 
 That is the **starting** speed. The longer someone stays asleep, the faster
-the meter fills: the speed **doubles every 75 seconds**, up to ×8. So staying
-in bed always pays off, and even a lone sleeper on a big server gets the dawn
-within a few minutes.
+the meter fills: the speed **doubles every 40 seconds**, up to ×8. And there
+is a hard limit: **dawn comes at most 2 minutes after the first player falls
+asleep**, whatever the night, the dreams or Unrest. Those only decide how much
+sooner.
 
 | Asleep | Typical time to dawn (Hard preset, Unrest 0) |
 |---|---|
 | everyone | 5 seconds |
-| 3 of 4 | about 0:40 |
-| 1 of 2 | about 1:05 |
-| 1 of 3 | about 1:40 |
-| 1 of 4 | about 2:10 |
-| 1 of 8 | about 3:20 |
-| 1 of 12 | about 3:40 |
+| 3 of 4 | about 0:27 |
+| 1 of 2 | about 0:40 |
+| 1 of 3 | about 1:00 |
+| 1 of 4 | about 1:12 |
+| 1 of 8 or fewer | about 1:30, never more than 2:00 |
 
 These include dream luck and the mix of night types; higher Unrest makes
-them longer (see DESIGN.md §12 for the full table). A night lasts about
+them longer, up to the 2-minute limit (see DESIGN.md §12 for the full table). A night lasts about
 9 minutes (546 seconds). Awake players can bring the dawn closer still by
 keeping watch (below).
 
@@ -100,8 +100,10 @@ keeping watch (below).
   Restless dream. While nobody is in bed it winds back down at the same rate.
 - The **difficulty preset** scales the time: Easy ×0.5, Normal ×0.75,
   Hard ×1.0. By default it follows the world difficulty.
-- If nobody is asleep (or every sleeper is having a Restless dream), the
-  meter **drains**: from full to empty in 60 seconds.
+- The **2-minute limit** works like a floor under the meter: after 1 minute
+  asleep it is at least 50%, after 2 minutes it is full. Like the ramp, it
+  winds back while nobody is in bed.
+- If nobody is asleep, the meter **drains**: from full to empty in 60 seconds.
 - The meter resets at the start of each night and after each skip.
 - Chimes play when it passes 50% and 90%.
 
@@ -118,7 +120,7 @@ meter toward dawn by keeping watch:
 | Breaking a block (not ones that break instantly, like grass or torches) | +0.2% |
 
 Each awake player can add **up to 20%** a night. Their actionbar shows what
-they just added (`Night watch +3% · dawn 64% · your share 12%`), and hovering
+took off the wait (`Night watch −6s (+3%) · dawn in 0:42 · your watch 12/20%`), and hovering
 over the *night passes* message lists everyone's share. A watch-assisted skip
 is still a partial skip for Unrest. Nothing counts when nobody is asleep, and
 creative players don't count.
@@ -170,35 +172,45 @@ that are hard to skip, until everyone sleeps together or lets a night pass.
 
 ## 6. Dreams and Nightmares
 
-Every 15 seconds each sleeper has a dream. It decides how much that sleeper
-counts towards the meter for the next 15 seconds.
+Every 15 seconds the sleepers dream **together**: one shared roll decides how
+much every sleeper counts towards the meter for the next 15 seconds. A good
+roll speeds everyone up; a bad one slows everyone down.
 
-| Dream | Chance | Effect |
+| Dream | Chance | Effect on everyone asleep |
 |---|---|---|
-| **Nightmare** | `3% × (1 − r) × (1 + 0.3 × Unrest)` | The sleeper wakes up, the meter loses 5%, and chat says *Steve wakes up in a cold sweat.* |
-| **Restless** | `30% − 20% × r + 3% × Unrest` | Counts as 0 sleepers |
-| **Deep** | `10% + 20% × r − 2% × Unrest` (at least 5%) | Counts as 2 sleepers |
-| **Normal** | the rest | Counts as 1 sleeper |
+| **Nightmare** | `6% × (1 − r) × (1 + 0.3 × Unrest)`, less with Luck | The meter loses 10%, and the **unluckiest** sleeper wakes up |
+| **Restless** | `30% − 20% × r + 3% × Unrest`, less with Luck | Each sleeper counts as ½ |
+| **Deep** | `10% + 20% × r − 2% × Unrest + 4% × Luck` (at least 5%) | Each sleeper counts as 2 |
+| **Normal** | the rest | Each sleeper counts as 1 |
 
-With half the server asleep and no Unrest, Deep and Restless cancel out on
-average. More sleepers make Deep sleep more likely; more Unrest makes bad
-dreams more likely. A player woken by a Nightmare can get straight back into
-bed.
+**Luck matters.** The roll uses the sleepers' combined vanilla **Luck**: each
+level of a *Potion of Luck* is +1, each level of *Bad Luck* is −1, and modded
+items that add Luck count too (up to ±5 in total). Every point of Luck adds 4%
+to Deep and takes 15% off the Restless and Nightmare chances; bad luck does the
+opposite. When a Nightmare hits, it wakes whoever has the lowest Luck. A
+group that drinks Luck before bed reaches the dawn about 15% sooner.
+
+More sleepers also make Deep sleep more likely and bad dreams less likely;
+more Unrest makes bad dreams more likely. A player woken by a Nightmare can
+get straight back into bed.
 
 Dreams don't apply to a whole-server sleep.
 
-Dreams are announced in chat, one line per roll:
+Each roll is announced in chat as one coloured line:
 
 ```
-💭 Steve sinks into a deep sleep. Alex tosses and turns.
+💭 Steve and Alex sink into a deep sleep together. [every sleeper counts 2x] (luck +2)
+💭 A nightmare grips Steve and Alex! Alex wakes up in a cold sweat. [dawn −10%, the unluckiest sleeper wakes]
 ```
 
-By default a sleeper is only mentioned when their dream changes (so a run of
-ordinary sleep stays quiet). Hover over a name to see what the dream does, or
-over 💭 to see the odds of each dream right now. Set `dreams.announce` to `all`
-to hear every roll, or `off` to keep chat quiet. The `/unrest` menu also shows
-each sleeper's current dream, and hovering over the *night passes* message
-shows how many Deep, Restless and Nightmare dreams the night had.
+Deep sleep is aqua, ordinary sleep gray, Restless yellow and a Nightmare red;
+the Luck tag is green or dark red. By default a roll is only announced when
+the dream changes (so a run of ordinary sleep stays quiet), and Nightmares
+always are. Hover over 💭 to see the odds of the next roll, or over the
+`[effect]` to see each sleeper's Luck. Set `dreams.announce` to `all` to hear
+every roll, or `off` to hear only Nightmares. The `/unrest` menu also shows
+the current dream, and hovering over the *night passes* message shows how
+many Deep, Restless and Nightmare dreams the night had.
 
 ---
 
@@ -312,13 +324,14 @@ except `registerSleepAlias`, which needs a restart.
 
 | Key | Default | Meaning |
 |---|---|---|
-| `baseSeconds` | `30.0` | The minimum fill time (with almost everyone asleep) |
-| `scaleSeconds` | `60.0` | How much each missing sleeper adds. Bigger = slower partial skips |
-| `capSeconds` | `520.0` | The longest fill time |
+| `baseSeconds` | `20.0` | The minimum fill time (with almost everyone asleep) |
+| `scaleSeconds` | `40.0` | How much each missing sleeper adds. Bigger = slower partial skips |
+| `capSeconds` | `240.0` | The longest fill time |
 | `wholeServerSeconds` | `5.0` | Delay before a whole-server sleep skips |
 | `drainPerSecond` | `0.016667` | How fast the meter empties when nobody is asleep (1/60 = 60s) |
-| `rampDoubleSeconds` | `75.0` | The fill speed doubles every this many seconds someone is asleep. `0` turns the ramp off |
+| `rampDoubleSeconds` | `40.0` | The fill speed doubles every this many seconds someone is asleep. `0` turns the ramp off |
 | `rampMax` | `8.0` | The most the ramp can speed the meter up |
+| `maxSleepSeconds` | `120.0` | The time limit: a partial skip never takes longer than this after someone falls asleep. `0` turns it off |
 
 ### presets
 
@@ -358,13 +371,17 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `enabled` | `true` | Turns dream rolls off (every sleeper then counts as 1) |
+| `enabled` | `true` | Turns the shared dream roll off (every sleeper then counts as 1) |
 | `rollIntervalSeconds` | `15` | Seconds between rolls |
 | `deepBase`, `deepPerRatio`, `deepPerDebt`, `deepMin` | 0.10, 0.20, −0.02, 0.05 | Deep chance = base + perRatio × r + perDebt × Unrest, at least min |
-| `restlessBase`, `restlessPerRatio`, `restlessPerDebt` | 0.30, −0.20, 0.03 | Restless chance, same shape |
-| `nightmareBase`, `nightmarePerDebt` | 0.03, 0.3 | Nightmare chance = base × (1 − r) × (1 + perDebt × Unrest) |
-| `nightmareMeterLoss` | `0.05` | Meter lost on a Nightmare |
-| `announce` | `changes` | Dream rolls in chat: `off`, `changes` (only when a sleeper's dream changes) or `all` |
+| `restlessBase`, `restlessPerRatio`, `restlessPerDebt` | 0.30, −0.20, 0.03 | Restless chance, same shape (then scaled by Luck) |
+| `nightmareBase`, `nightmarePerDebt` | 0.06, 0.3 | Nightmare chance = base × (1 − r) × (1 + perDebt × Unrest) (then scaled by Luck) |
+| `nightmareMeterLoss` | `0.10` | Meter lost on a Nightmare |
+| `deepWeight`, `restlessWeight` | 2.0, 0.5 | How much each sleeper counts after a Deep or a Restless roll |
+| `luckDeep` | `0.04` | Deep chance added per point of combined Luck |
+| `luckBad` | `0.15` | Share of the Restless and Nightmare chances taken off per point of Luck (added per point of bad luck) |
+| `luckMax` | `5.0` | Combined Luck counts up to this much either way |
+| `announce` | `changes` | The shared roll in chat: `off` (Nightmares only), `changes` (when the dream changes) or `all` |
 | `nightmareSound` | `true` | A quiet sound for the player a Nightmare wakes (needs `indicators.sounds`) |
 
 ### nightWatch
@@ -429,15 +446,16 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 
 ### Tuning tips
 
-- **Too hard for a small group?** Lower `scaleSeconds` (e.g. 40) or
-  `rampDoubleSeconds` (e.g. 60), raise `nightWatch.maxPerPlayer`, or set
-  `difficultyPreset=normal`.
-- **Too easy now?** Raise `rampDoubleSeconds` or lower `rampMax`; set
-  `rampDoubleSeconds=0` for the original, steady meter.
+- **Still too long?** Lower `maxSleepSeconds` (e.g. 90). It's the longest
+  anyone waits.
+- **Too easy now?** Raise `maxSleepSeconds` (e.g. 180) or `rampDoubleSeconds`.
+  For the original v1 meter set `maxSleepSeconds=0`, `rampDoubleSeconds=0`,
+  `baseSeconds=30`, `scaleSeconds=60` and `capSeconds=520`.
 - **Lone sleepers on a big server should never skip?** Set
-  `rampDoubleSeconds=0` and raise `capSeconds` above the night length even on
-  a Calm night (546s × 1.3 ≈ 710s, so e.g. `750`). A small share asleep then
-  hits the cap and the night ends first.
+  `maxSleepSeconds=0`, `rampDoubleSeconds=0` and raise `capSeconds` above the
+  night length even on a Calm night (546s × 1.3 ≈ 710s, so e.g. `750`).
+- **Luck too strong or too weak?** Change `luckDeep` and `luckBad`; set both
+  to 0 to ignore Luck.
 - **Unrest builds too fast?** Lower `partialSkipFactor` or raise
   `naturalNightRelief`.
 - **No surprises?** Set `dreams.enabled=false` and every `<type>Multiplier`

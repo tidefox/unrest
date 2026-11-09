@@ -14,11 +14,11 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 ## Features (v1)
 
-- **Sleep meter.** The time to dawn depends on the share of players asleep, and the meter speeds up the longer someone stays in bed. With everyone asleep it takes 5 seconds; with half the server asleep it takes about a minute; a lone sleeper on a big server waits about 3–4 minutes.
+- **Sleep meter.** The time to dawn depends on the share of players asleep, and the meter speeds up the longer someone stays in bed. With everyone asleep it takes 5 seconds; with half the server asleep about 40 seconds; and nobody ever waits more than **2 minutes**.
 - **Night watch.** While someone sleeps, awake players bring the dawn closer by killing hostile mobs, mining and exploring new chunks, up to 20% each per night.
 - **Night types,** rolled at dusk: Calm, Normal, Restless or Haunted. A Haunted night is much slower unless at least half the server is in bed.
 - **Unrest (Night Debt).** Partial skips build it up. A whole-server sleep, or a night that ends on its own with no skip, brings it down. Higher Unrest makes Restless and Haunted nights, and restless dreams, more likely.
-- **Dream rolls.** Every 15 seconds each sleeper rolls for Deep sleep, Restless sleep or a Nightmare, and chat tells everyone when someone's dream changes.
+- **Shared dreams.** Every 15 seconds the sleepers roll together for Deep sleep, Restless sleep or a Nightmare, which then applies to all of them. Their combined vanilla **Luck** (Luck potions) improves the odds, and each roll gets a coloured line in chat.
 - **Sleeping costs food.** Sleepers wake hungrier the more hours the skip covered. A skip never takes anyone below 3 food points.
 - **AFK-aware.** AFK players don't count against the skip, and sleepers must have been active just before getting into bed.
 - **No dodging.** An awake player who logs out or hops to the Nether at night keeps counting as awake until they would have gone AFK, so leaving never speeds up the skip.

@@ -50,29 +50,29 @@ second (every 20 ticks).
 ### 2.1 Fill time
 
 ```
-T(r) = BASE + SCALE × (1 − r) / r        BASE = 30s, SCALE = 60s
-T(r) = min(T(r), CAP)                    CAP  = 520s
+T(r) = BASE + SCALE × (1 − r) / r        BASE = 20s, SCALE = 40s
+T(r) = min(T(r), CAP)                    CAP  = 240s
 ```
 
 | Asleep | T (Hard preset) |
 |---|---|
 | everyone | **5s** (whole-server sleep, §2.3) |
-| 3 of 4 | 50s |
-| 2 of 3 | 60s |
-| 1 of 2 | 1m 30s |
-| 1 of 3 | 2m 30s |
-| 1 of 4 | 3m 30s |
-| 1 of 8 | 7m 30s |
-| 1 of 10 or more | 8m 40s (cap) |
+| 3 of 4 | 33s |
+| 2 of 3 | 40s |
+| 1 of 2 | 1m 00s |
+| 1 of 3 | 1m 40s |
+| 1 of 4 | 2m 20s |
+| 1 of 6 or more | 4m 00s (cap) |
 
 That is the starting fill time. The ramp (§2.2) speeds it up the longer
-someone sleeps, so even a lone sleeper on a large server reaches dawn in a
-few minutes (§12). A night lasts about 546 seconds.
+someone sleeps, and the time limit (§2.2) ends any partial skip **2 minutes**
+after the first sleeper, so the longest wait is 2:00 (§12). A night lasts
+about 546 seconds.
 
 ### 2.2 Each second
 
 ```
-weight  = Σ dream-weight of each sleeper          (§4, normally 1.0 each)
+weight  = S × weight of the shared dream          (§4, normally 1.0 each)
 r_eff   = min(1.0, weight / N)
 if r_eff > 0:
     meter += nightMultiplier / (T(r_eff) × presetScale) × ramp(rampSeconds)
@@ -80,17 +80,24 @@ else:
     meter −= DRAIN_PER_SECOND                     (default 1/60: empty in 60s)
 rampSeconds = S > 0 ? rampSeconds + 1 : max(0, rampSeconds − 1)
 meter   += watch                                  (§4.2, added this second)
+meter    = max(meter, rampSeconds / MAX_SLEEP)    (the time limit)
 meter    = clamp(meter, 0, 1)
 if meter ≥ 1: skip()                              (§2.4)
 ```
 
 - The `nightMultiplier` comes from the night type (§3).
 - `presetScale` comes from the difficulty preset (§8).
-- `ramp(t) = min(RAMP_MAX, 2^(t / RAMP_DOUBLE))`, with `RAMP_DOUBLE = 75s`
-  and `RAMP_MAX = 8`. The speed doubles every 75 seconds that anyone is
+- `ramp(t) = min(RAMP_MAX, 2^(t / RAMP_DOUBLE))`, with `RAMP_DOUBLE = 40s`
+  and `RAMP_MAX = 8`. The speed doubles every 40 seconds that anyone is
   asleep, so a long wait always pays off. It keeps building through Restless
   dreams, winds back down while nobody sleeps, and resets with the meter.
   `RAMP_DOUBLE = 0` turns it off.
+- **The time limit**, `MAX_SLEEP = 120s` (`meter.maxSleepSeconds`): the
+  meter never sits below the share of 2 minutes that someone has been asleep,
+  so it fills by then at the latest, on any night type and through any dream.
+  Dreams, Unrest, Luck, the night type and the watch only decide how much
+  sooner. It counts the same `rampSeconds`, so it winds back while nobody
+  sleeps. 0 turns it off.
 - On a **Haunted** night with `r < 0.5`, the night multiplier is multiplied
   again by `hauntedBelowRatioMultiplier` (0.5, so ×0.3 in all). 0 restores the
   hard block, where the meter only drains.
@@ -175,51 +182,67 @@ dream rolls (§4).
 
 ## 4. Dream rolls
 
-Every 15 seconds, each sleeper rolls once. Here `r` is the headcount ratio and
-`D` is Unrest.
+Every 15 seconds the sleepers make **one shared roll**. The result applies to
+all of them until the next roll, so a good roll is everyone's luck and a bad
+roll is everyone's problem. Here `r` is the headcount ratio, `D` is Unrest
+and `L` is the sleepers' **combined Luck**.
+
+**Luck.** `L` is the sum of every sleeper's vanilla Luck attribute
+(`EntityPlayer.getLuck()`: +1 per level of the Luck potion, −1 per level of
+Bad Luck, plus anything a mod or item adds), clamped to ±`luckMax` (5).
+`bad(L) = max(0, 1 − 0.15L)` scales the bad rolls: +2 Luck makes them 30 %
+less likely, −2 makes them 30 % more likely.
 
 | Roll | Chance | Effect for the next 15s |
 |---|---|---|
-| **Nightmare** | `0.03 × (1 − r) × (1 + 0.3D)` | The sleeper is woken (`wakeUpPlayer(true, true, false)`), the meter loses 5 %, and a chat message is sent: `Steve wakes up in a cold sweat.` |
-| **Restless** | `0.30 − 0.20r + 0.03D` | That sleeper's weight is 0 |
-| **Deep** | `max(0.05, 0.10 + 0.20r − 0.02D)` | That sleeper's weight is 2 |
-| **Normal** | the remaining chance | That sleeper's weight is 1 |
+| **Nightmare** | `0.06 × (1 − r) × (1 + 0.3D) × bad(L)` | The meter loses 10 % and the **unluckiest** sleeper (lowest Luck, a random one on a tie) is woken (`wakeUpPlayer(true, true, false)`). The others sleep on with weight 1 |
+| **Restless** | `(0.30 − 0.20r + 0.03D) × bad(L)` | Every sleeper's weight is 0.5 |
+| **Deep** | `max(0.05, 0.10 + 0.20r − 0.02D + 0.04L)` | Every sleeper's weight is 2 |
+| **Normal** | the remaining chance | Every sleeper's weight is 1 |
 
 Check the rolls in this order: Nightmare, then Restless, then Deep, then Normal.
 
-- With half the server asleep and D = 0, Deep and Restless cancel out on average.
-- More sleepers make Deep more likely.
+- With half the server asleep, D = 0 and no Luck, Deep and Restless are both 20 %.
+- More sleepers make Deep more likely and the bad rolls less likely.
 - More Unrest makes Restless and Nightmare more likely.
+- More Luck does the opposite, so a Luck potion before bed helps everyone.
+- With `tools/simulate.py --luck 3`, skips take about 15 % less time; with
+  `--luck -3`, about 15 % more.
 
-A sleeper woken by a Nightmare can get back into bed straight away. They count
-again once the vanilla sleep timer finishes, since they were active just before.
-
-A Nightmare also plays a quiet zombie-villager-cure sound to the woken player
-only (`dreams.nightmareSound`, and `indicators.sounds` must be on).
+The sleeper woken by a Nightmare can get back into bed straight away. They
+count again once the vanilla sleep timer finishes, since they were active
+just before. The Nightmare also plays a quiet zombie-villager-cure sound to
+them only (`dreams.nightmareSound`, and `indicators.sounds` must be on).
 
 ### 4.1 Dream announcements
 
-Each roll can post one chat line to everyone in the Overworld, grouping all the
-sleepers worth mentioning:
+A roll can post one coloured chat line to everyone in the Overworld:
 
 ```
-💭 Steve sinks into a deep sleep. Alex tosses and turns.
+💭 Steve and Alex sink into a deep sleep together. [every sleeper counts 2x] (luck +2)
+💭 A nightmare grips Steve and Alex! Alex wakes up in a cold sweat. [dawn −10%, the unluckiest sleeper wakes]
 ```
 
 `dreams.announce` decides which rolls are mentioned:
 
 | Value | Mentioned |
 |---|---|
-| `off` | Nothing (Nightmares keep their own message) |
-| `changes` (default) | A sleeper whose dream differs from their previous roll. A first roll counts as a change from Normal, so a first Normal roll is silent. |
+| `off` | Only Nightmares |
+| `changes` (default) | A roll that differs from the previous one, and every Nightmare. A first roll counts as a change from Normal, so a first Normal roll is silent. |
 | `all` | Every roll |
 
-The phrase depends on the previous dream: *sinks into a deep sleep* / *stays
-deeply asleep*, *tosses and turns* / *keeps tossing and turning*, *settles
-down* (Restless → Normal), *stirs a little* (Deep → Normal) and *sleeps
-soundly*. Colours: Deep aqua, Restless yellow, Normal gray. Hovering over a
-name shows the dream and its effect; hovering over 💭 shows the current odds
-of each roll. With `indicators.chat = false` nothing is posted.
+- **Names:** one sleeper by name, two as `Steve and Alex`, three as
+  `Steve, Alex and Bob`, more as `Steve, Alex and 3 others`.
+- **Phrase**, after the previous roll: *sink into a deep sleep (together)* /
+  *stay deeply asleep*, *toss and turn* / *keep tossing and turning*,
+  *settle down* (Restless → Normal), *stir a little* (Deep → Normal), *sleep
+  soundly*, and *A nightmare grips … ! X wakes up in a cold sweat*.
+- **Colours:** the phrase is aqua for Deep, gray for Normal, yellow for
+  Restless and red for a Nightmare. The `[effect]` is dark gray. The Luck
+  tag is green when positive and dark red when negative, and left out at 0.
+- **Hovers:** 💭 shows the odds of the next roll with the current Luck; the
+  `[effect]` lists every sleeper's own Luck.
+- With `indicators.chat = false` nothing is posted.
 
 ### 4.2 Night watch
 
@@ -239,8 +262,11 @@ least one sleeper** is counted, every awake, counted player in the Overworld
   second-tick (§2.2), on any night type. During a whole-server sleep they are
   discarded.
 - A skip helped by the watch is still a partial skip for Unrest.
-- Feedback: right after a deed, the player's actionbar shows
-  `Night watch +3% · dawn 64% · your share 12%`, and the 5-second nudge skips
+- Feedback: right after a deed, the player's actionbar shows how much time
+  it took off the wait: `Night watch −6s (+3%) · dawn in 0:42 · your watch
+  12/20%`. The seconds are the meter added divided by the sleepers' current
+  fill rate (ramp included); while the meter isn't filling only `+3%` is
+  shown. The 5-second nudge skips
   them for 3 seconds. The nudge itself ends with `— or keep watch: fight,
   mine, explore`. The skip summary's hover lists each helper's share.
 - The watch resets with the meter. Its total is logged as `watchTotal` (§9.2).
@@ -315,7 +341,7 @@ last-activity time is kept in memory only.
 |---|---|---|
 | **Bossbar** (`BossInfoServer`, `NOTCHED_10`) | Counted players in the Overworld while at least one player is in bed (`bossbar.alwaysAtNight` makes it show for the whole night) | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. The bar shows the meter. Colour by night type: Calm green, Normal blue, Restless yellow, Haunted red. Up to `bossbar.maxNames` (3) names, then `+N`. |
 | **Chat: into or out of bed** | Everyone in the Overworld | `Steve lies down (3/7) — dawn in ~1:20`. Hovering over it lists who is asleep and who is awake. |
-| **Chat: events** | Everyone in the Overworld | The night roll (only with `indicators.announceNight`, off by default), dream rolls (§4.1), Nightmare wake-ups, and the skip summary. Hovering over the skip summary shows the night's Deep, Restless and Nightmare counts. |
+| **Chat: events** | Everyone in the Overworld | The night roll (only with `indicators.announceNight`, off by default), the shared dream roll (§4.1, Nightmares included), and the skip summary. Hovering over the skip summary shows the night's Deep, Restless and Nightmare counts and each player's Night watch share. |
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
 | **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
@@ -364,13 +390,14 @@ general {
     S:difficultyPreset=auto            # auto | easy | normal | hard ; auto follows world difficulty
 }
 meter {
-    D:baseSeconds=30.0
-    D:scaleSeconds=60.0
-    D:capSeconds=520.0
+    D:baseSeconds=20.0
+    D:scaleSeconds=40.0
+    D:capSeconds=240.0
     D:wholeServerSeconds=5.0
     D:drainPerSecond=0.016667
-    D:rampDoubleSeconds=75.0           # 0 = no ramp
+    D:rampDoubleSeconds=40.0           # 0 = no ramp
     D:rampMax=8.0
+    D:maxSleepSeconds=120.0            # the time limit; 0 = none
 }
 presets {
     D:easyScale=0.5
@@ -397,8 +424,10 @@ dreams {
     I:rollIntervalSeconds=15
     D:deepBase=0.10      D:deepPerRatio=0.20      D:deepPerDebt=-0.02    D:deepMin=0.05
     D:restlessBase=0.30  D:restlessPerRatio=-0.20 D:restlessPerDebt=0.03
-    D:nightmareBase=0.03 D:nightmarePerDebt=0.3
-    D:nightmareMeterLoss=0.05
+    D:nightmareBase=0.06 D:nightmarePerDebt=0.3
+    D:nightmareMeterLoss=0.10
+    D:deepWeight=2.0     D:restlessWeight=0.5
+    D:luckDeep=0.04      D:luckBad=0.15           D:luckMax=5.0
     S:announce=changes   B:nightmareSound=true
 }
 nightWatch {
@@ -490,7 +519,7 @@ io.github.tidefox.unrest
 ├── core/
 │   ├── SleepTracker.java       counts N/S each second, dream weights, meter, skip
 │   ├── NightRoller.java        night type roll at 12541, weights from debt
-│   ├── DreamRoller.java        per-sleeper rolls every 15s
+│   ├── DreamRoller.java        the shared dream roll every 15s, with Luck
 │   ├── NightWatch.java         awake players' deeds, capped per player (§4.2)
 │   ├── SkipHandler.java        time jump, wake, weather, hunger cost, debt update
 │   └── ActivityTracker.java    last-activity per UUID, AFK + active-before-bed
@@ -513,21 +542,22 @@ io.github.tidefox.unrest
 Simulated with `tools/simulate.py`, 4,000 nights per cell. Each cell shows the
 median time to skip, with the 10th–90th percentile range in brackets. It
 assumes sleepers get into bed at dusk and stay there, on the Hard preset,
-with the ramp and nobody keeping watch (§4.2), which only makes it faster.
+with the ramp and the 2-minute limit, no Luck, and nobody keeping watch
+(§4.2), which only makes it faster.
 
 | Asleep | Unrest 0 | Unrest 2 | Unrest 5 |
 |---|---|---|---|
-| 3 of 4 | 0:39 (0:27–0:56) | 0:46 (0:30–1:07) | 1:01 (0:41–1:26) |
-| 2 of 3 | 0:46 (0:27–1:08) | 0:54 (0:33–1:20) | 1:12 (0:45–1:41) |
-| 1 of 2 | 1:04 (0:36–1:35) | 1:16 (0:44–1:51) | 1:36 (1:00–2:18) |
-| 2 of 4 | 1:05 (0:44–1:34) | 1:19 (0:53–1:50) | 1:43 (1:11–2:17) |
-| 1 of 3 | 1:41 (1:09–2:33) | 1:58 (1:21–3:14) | 2:33 (1:45–3:57) |
-| 1 of 4 | 2:08 (1:35–3:08) | 2:28 (1:47–3:48) | 3:08 (2:17–4:53) |
-| 1 of 8 | 3:20 (2:43–4:33) | 3:46 (2:59–6:12) | 4:33 (3:31–7:43), 6% no skip |
-| 1 of 12 | 3:42 (3:05–4:52) | 4:10 (3:22–7:10), 3% no skip | 4:56 (3:51–7:19), 15% no skip |
+| 3 of 4 | 0:27 (0:19–0:40) | 0:29 (0:19–0:43) | 0:37 (0:25–0:51) |
+| 2 of 3 | 0:31 (0:20–0:45) | 0:35 (0:21–0:51) | 0:41 (0:27–0:58) |
+| 1 of 2 | 0:40 (0:22–0:59) | 0:45 (0:26–1:04) | 0:56 (0:35–1:15) |
+| 2 of 4 | 0:40 (0:22–0:58) | 0:44 (0:25–1:03) | 0:54 (0:35–1:12) |
+| 1 of 3 | 0:59 (0:39–1:23) | 1:06 (0:45–1:40) | 1:21 (0:59–1:49) |
+| 1 of 4 | 1:12 (0:54–1:36) | 1:19 (1:00–1:50) | 1:32 (1:13–1:55) |
+| 1 of 8 | 1:31 (1:19–1:50) | 1:35 (1:22–2:00) | 1:42 (1:31–2:00) |
+| 1 of 12 | 1:31 (1:22–1:50) | 1:41 (1:22–2:00) | 1:42 (1:31–2:00) |
 
-**Target:** with a third to half of the server asleep and low Unrest, most
-skips should take **1:00–2:30**. "No skip" means the night ended on its own
+**Target:** no partial skip takes more than **2:00**; with a third to half of
+the server asleep and low Unrest, most take **0:30–1:00**. "No skip" means the night ended on its own
 before the meter filled.
 
 ---

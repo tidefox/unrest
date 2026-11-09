@@ -49,40 +49,49 @@ public final class ChatDisplay {
         toOverworld(world, colored(p.getName() + " gets up (" + s + "/" + n + ")", TextFormatting.GRAY));
     }
 
-    public static void nightmare(WorldServer world, EntityPlayerMP p) {
-        toOverworld(world, colored(p.getName() + " wakes up in a cold sweat.", TextFormatting.DARK_PURPLE));
-    }
-
     /**
-     * One line for a dream roll, e.g. {@code 💭 Steve sinks into a deep sleep. Alex tosses and turns.}
-     * Each name hovers with what the dream does; the symbol hovers with the odds of the roll.
-     * Sends nothing if no roll is worth announcing under {@code dreams.announce}.
+     * One coloured line for the shared dream roll, e.g.
+     * {@code 💭 Steve and Alex sink into a deep sleep together. [every sleeper counts 2x] (luck +2)}.
+     * The symbol hovers with the odds; the effect hovers with who rolled and their Luck.
+     * Sends nothing if the roll isn't worth announcing under {@code dreams.announce}.
      */
-    public static void dreams(WorldServer world, List<DreamRoller.Roll> rolls, double r, double debt) {
-        ITextComponent line = null;
-        for (DreamRoller.Roll roll : rolls) {
-            if (!DreamReport.announce(roll.before, roll.after, UnrestConfig.dreamAnnounce)) {
-                continue;
-            }
-            if (line == null) {
-                line = colored(UnrestConfig.dreamSymbol(), TextFormatting.DARK_AQUA);
-                line.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, odds(r, debt)));
-            }
-            ITextComponent part = colored(" " + DreamReport.phrase(roll.player.getName(), roll.before, roll.after) + ".",
-                    dreamColor(roll.after));
-            part.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
-                    new TextComponentString(roll.after.label() + "\n" + roll.after.effect())));
-            line.appendSibling(part);
+    public static void dreams(WorldServer world, DreamRoller.Roll roll, double r, double debt) {
+        if (!DreamReport.announce(roll.before, roll.after, UnrestConfig.dreamAnnounce)) {
+            return;
         }
-        if (line != null) {
-            toOverworld(world, line);
+        List<String> names = new ArrayList<>();
+        StringBuilder luckList = new StringBuilder();
+        for (EntityPlayerMP p : roll.sleepers) {
+            names.add(p.getName());
+            luckList.append('\n').append(p.getName()).append(": luck ").append(signed(p.getLuck()));
         }
+        ITextComponent line = colored(UnrestConfig.dreamSymbol(), TextFormatting.DARK_AQUA);
+        line.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, odds(r, debt, roll.luck)));
+        String phrase = DreamReport.phrase(names, roll.before, roll.after,
+                roll.woken == null ? null : roll.woken.getName());
+        line.appendSibling(colored(" " + phrase + ".", dreamColor(roll.after)));
+        ITextComponent effect = colored(" [" + roll.after.effect() + "]", TextFormatting.DARK_GRAY);
+        effect.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponentString(
+                roll.after.label() + " \u2014 one shared roll for every sleeper" + luckList)));
+        line.appendSibling(effect);
+        String tag = DreamReport.luckTag(roll.luck);
+        if (tag != null) {
+            line.appendSibling(colored(" (" + tag + ")", roll.luck > 0 ? TextFormatting.GREEN : TextFormatting.DARK_RED));
+        }
+        toOverworld(world, line);
     }
 
-    static ITextComponent odds(double r, double debt) {
-        int[] o = DreamReport.oddsPercent(r, debt);
-        return new TextComponentString("Odds each roll right now:\nDeep " + o[2] + "%\nSound " + o[3]
-                + "%\nRestless " + o[1] + "%\nNightmare " + o[0] + "%");
+    static ITextComponent odds(double r, double debt, double luck) {
+        int[] o = DreamReport.oddsPercent(r, debt, luck);
+        String l = DreamReport.luckTag(luck);
+        return new TextComponentString("Odds of the next roll right now" + (l == null ? "" : " (" + l + ")")
+                + ":\nDeep " + o[2] + "%\nSound " + o[3] + "%\nRestless " + o[1] + "%\nNightmare " + o[0] + "%"
+                + "\n\nMore sleepers and more Luck mean better dreams.");
+    }
+
+    private static String signed(double v) {
+        long l = Math.round(v);
+        return l > 0 ? "+" + l : Long.toString(l);
     }
 
     public static TextFormatting dreamColor(Dream d) {
@@ -92,7 +101,7 @@ public final class ChatDisplay {
             case RESTLESS:
                 return TextFormatting.YELLOW;
             case NIGHTMARE:
-                return TextFormatting.DARK_PURPLE;
+                return TextFormatting.RED;
             default:
                 return TextFormatting.GRAY;
         }

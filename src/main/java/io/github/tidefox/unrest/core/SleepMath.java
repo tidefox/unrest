@@ -54,7 +54,7 @@ public final class SleepMath {
     public static double secondsToFull(double meter, double rEff, double nightMultiplier, double presetScale,
                                        double rampSeconds) {
         double step = meterStep(rEff, nightMultiplier, presetScale);
-        if (step <= 0) {
+        if (step <= 0 && UnrestConfig.maxSleepSeconds <= 0) {
             return Double.POSITIVE_INFINITY;
         }
         double m = meter;
@@ -63,6 +63,7 @@ public final class SleepMath {
                 return t;
             }
             m += step * ramp(rampSeconds + t);
+            m = Math.max(m, meterFloor(rampSeconds + t + 1));
         }
         return Double.POSITIVE_INFINITY;
     }
@@ -109,33 +110,74 @@ public final class SleepMath {
         return NightType.NORMAL;
     }
 
+    /** The sleepers' combined Luck, clamped to ±luckMax (§4). */
+    public static double groupLuck(double[] luck) {
+        double sum = 0;
+        for (double l : luck) {
+            sum += l;
+        }
+        return Math.max(-UnrestConfig.luckMax, Math.min(UnrestConfig.luckMax, sum));
+    }
+
+    /** Scale on the bad rolls for combined Luck {@code luck}: below 1 when lucky, above 1 when unlucky. */
+    public static double badLuckFactor(double luck) {
+        return Math.max(0.0, 1.0 - UnrestConfig.luckBad * luck);
+    }
+
     public static double nightmareChance(double r, double debt) {
-        return Math.max(0.0, UnrestConfig.nightmareBase * (1.0 - r) * (1.0 + UnrestConfig.nightmarePerDebt * debt));
+        return nightmareChance(r, debt, 0);
+    }
+
+    public static double nightmareChance(double r, double debt, double luck) {
+        return Math.max(0.0, UnrestConfig.nightmareBase * (1.0 - r) * (1.0 + UnrestConfig.nightmarePerDebt * debt)
+                * badLuckFactor(luck));
     }
 
     public static double restlessChance(double r, double debt) {
-        return Math.max(0.0, UnrestConfig.restlessBase + UnrestConfig.restlessPerRatio * r + UnrestConfig.restlessPerDebt * debt);
+        return restlessChance(r, debt, 0);
+    }
+
+    public static double restlessChance(double r, double debt, double luck) {
+        return Math.max(0.0, (UnrestConfig.restlessBase + UnrestConfig.restlessPerRatio * r
+                + UnrestConfig.restlessPerDebt * debt) * badLuckFactor(luck));
     }
 
     public static double deepChance(double r, double debt) {
-        return Math.max(UnrestConfig.deepMin, UnrestConfig.deepBase + UnrestConfig.deepPerRatio * r + UnrestConfig.deepPerDebt * debt);
+        return deepChance(r, debt, 0);
     }
 
-    /** One dream roll for headcount ratio {@code r} and Unrest {@code debt} (§4). */
+    public static double deepChance(double r, double debt, double luck) {
+        return Math.max(UnrestConfig.deepMin, UnrestConfig.deepBase + UnrestConfig.deepPerRatio * r
+                + UnrestConfig.deepPerDebt * debt + UnrestConfig.luckDeep * luck);
+    }
+
     public static Dream rollDream(double r, double debt, Random rand) {
+        return rollDream(r, debt, 0, rand);
+    }
+
+    /** The shared dream roll for ratio {@code r}, Unrest {@code debt} and combined Luck {@code luck} (§4). */
+    public static Dream rollDream(double r, double debt, double luck, Random rand) {
         double x = rand.nextDouble();
-        double nightmare = nightmareChance(r, debt);
+        double nightmare = nightmareChance(r, debt, luck);
         if (x < nightmare) {
             return Dream.NIGHTMARE;
         }
-        double restless = restlessChance(r, debt);
+        double restless = restlessChance(r, debt, luck);
         if (x < nightmare + restless) {
             return Dream.RESTLESS;
         }
-        if (x < nightmare + restless + deepChance(r, debt)) {
+        if (x < nightmare + restless + deepChance(r, debt, luck)) {
             return Dream.DEEP;
         }
         return Dream.NORMAL;
+    }
+
+    /** The lowest the meter can be after someone has slept {@code sleptSeconds} (§2.2): the 2-minute limit. */
+    public static double meterFloor(double sleptSeconds) {
+        if (UnrestConfig.maxSleepSeconds <= 0) {
+            return 0.0;
+        }
+        return Math.max(0.0, Math.min(1.0, sleptSeconds / UnrestConfig.maxSleepSeconds));
     }
 
     /** Food points a sleeper loses for a skip of {@code ticksSkipped} ticks (§5), before the floor. */

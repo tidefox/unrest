@@ -3,25 +3,32 @@
 
 Models one night per run, starting at the earliest moment players can sleep,
 with S of N counted players getting into bed immediately and staying there
-(except when a Nightmare wakes them). Prints median and 10th-90th percentile
+(except when a Nightmare wakes one of them). The sleepers roll one shared
+dream every 15 seconds; nobody keeps watch and nobody has any Luck. Prints median and 10th-90th percentile
 time-to-skip plus the share of nights that end without a skip.
 
-Usage: python3 tools/simulate.py [--runs 4000] [--seed 1]
+Usage: python3 tools/simulate.py [--runs 4000] [--seed 1] [--luck 0]
 """
 import argparse
 import random
 import statistics
 
 NIGHT_SECONDS = 546          # ticks 12541..23458 at 20 ticks/s
-ROLL_INTERVAL = 15           # seconds between dream rolls
+ROLL_INTERVAL = 15           # seconds between shared dream rolls
 REBED_SECONDS = 15           # time a woken sleeper is out before counting again
 
-BASE = 30.0                  # seconds
-SCALE = 60.0                 # seconds
-CAP = 520.0                  # seconds
-NIGHTMARE_METER_LOSS = 0.05
-RAMP_DOUBLE_SECONDS = 75.0   # fill speed doubles every this many seconds someone is asleep
+BASE = 20.0                  # seconds
+SCALE = 40.0                 # seconds
+CAP = 240.0                  # seconds
+NIGHTMARE_METER_LOSS = 0.10
+RAMP_DOUBLE_SECONDS = 40.0   # fill speed doubles every this many seconds someone is asleep
 RAMP_MAX = 8.0               # the ramp never speeds the meter up more than this
+MAX_SLEEP_SECONDS = 120.0    # the meter never lags behind this share of the time asleep
+
+DEEP_WEIGHT = 2.0            # each sleeper counts this much after a Deep roll
+RESTLESS_WEIGHT = 0.5        # ... and this much after a Restless roll
+LUCK_DEEP = 0.04             # Deep chance per point of combined Luck
+LUCK_BAD = 0.15              # share of the bad chances removed per point of Luck
 
 NIGHT_TYPES = {
     # name: (base weight, weight per debt, minimum weight, meter multiplier)
@@ -44,6 +51,12 @@ def ramp(seconds):
     return min(RAMP_MAX, 2 ** (seconds / RAMP_DOUBLE_SECONDS))
 
 
+def floor(seconds):
+    if MAX_SLEEP_SECONDS <= 0:
+        return 0.0
+    return min(1.0, seconds / MAX_SLEEP_SECONDS)
+
+
 def roll_night(debt):
     names = list(NIGHT_TYPES)
     weights = [max(lo, base + per * debt) for base, per, lo, _ in NIGHT_TYPES.values()]
@@ -51,45 +64,45 @@ def roll_night(debt):
     return name, NIGHT_TYPES[name][3]
 
 
-def dream_chances(r, debt):
-    deep = max(0.05, 0.10 + 0.20 * r - 0.02 * debt)
-    restless = 0.30 - 0.20 * r + 0.03 * debt
-    nightmare = 0.03 * (1 - r) * (1 + 0.3 * debt)
+def dream_chances(r, debt, luck=0.0):
+    bad = max(0.0, 1 - LUCK_BAD * luck)
+    deep = max(0.05, 0.10 + 0.20 * r - 0.02 * debt + LUCK_DEEP * luck)
+    restless = (0.30 - 0.20 * r + 0.03 * debt) * bad
+    nightmare = 0.06 * (1 - r) * (1 + 0.3 * debt) * bad
     return deep, restless, nightmare
 
 
-def run_night(sleepers, players, debt):
+def run_night(sleepers, players, debt, luck=0.0):
+    """Seconds to the skip, or None if the night ends on its own."""
     r = sleepers / players
     if sleepers == players:
         return 5
     night, mult = roll_night(debt)
     if night == "haunted" and r < HAUNTED_MIN_RATIO:
-        if HAUNTED_BELOW_RATIO_MULTIPLIER <= 0:
-            return None
         mult *= HAUNTED_BELOW_RATIO_MULTIPLIER
-    deep, restless, nightmare = dream_chances(r, debt)
+    deep, restless, nightmare = dream_chances(r, debt, luck)
     meter, t = 0.0, 0
-    out_until = [0] * sleepers
+    out_until = 0                # one sleeper is out after a Nightmare
     while t < NIGHT_SECONDS:
-        weight = 0.0
-        for i in range(sleepers):
-            if t < out_until[i]:
-                continue
-            x = random.random()
-            if x < nightmare:
-                meter = max(0.0, meter - NIGHTMARE_METER_LOSS)
-                out_until[i] = t + REBED_SECONDS
-            elif x < nightmare + restless:
-                pass
-            elif x < nightmare + restless + deep:
-                weight += 2
-            else:
-                weight += 1
-        r_eff = min(1.0, weight / players)
-        rate = 0.0 if r_eff <= 0 else mult / fill_time(r_eff)
+        # One shared roll for every sleeper.
+        x = random.random()
+        if x < nightmare:
+            meter = max(0.0, meter - NIGHTMARE_METER_LOSS)
+            out_until = t + REBED_SECONDS
+            weight = 1.0
+        elif x < nightmare + restless:
+            weight = RESTLESS_WEIGHT
+        elif x < nightmare + restless + deep:
+            weight = DEEP_WEIGHT
+        else:
+            weight = 1.0
         for _ in range(ROLL_INTERVAL):
-            meter += rate * ramp(t)
+            asleep = sleepers - (1 if t < out_until else 0)
+            r_eff = min(1.0, weight * asleep / players)
+            if r_eff > 0 and mult > 0:
+                meter += mult / fill_time(r_eff) * ramp(t)
             t += 1
+            meter = max(meter, floor(t))
             if meter >= 1:
                 return t
             if t >= NIGHT_SECONDS:
@@ -106,6 +119,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", type=int, default=4000)
     ap.add_argument("--seed", type=int, default=1)
+    ap.add_argument("--luck", type=float, default=0.0, help="the sleepers' combined Luck (-5 to 5)")
     args = ap.parse_args()
     random.seed(args.seed)
     cases = [(3, 4), (2, 3), (1, 2), (2, 4), (1, 3), (1, 4), (1, 8), (1, 12)]
@@ -114,7 +128,7 @@ def main():
     for s, n in cases:
         cells = []
         for debt in (0, 2, 5):
-            res = [run_night(s, n, debt) for _ in range(args.runs)]
+            res = [run_night(s, n, debt, args.luck) for _ in range(args.runs)]
             ok = [x for x in res if x is not None]
             miss = 100 * (1 - len(ok) / len(res))
             if len(ok) < 10:

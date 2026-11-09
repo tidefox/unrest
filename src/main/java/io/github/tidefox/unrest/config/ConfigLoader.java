@@ -68,15 +68,18 @@ public final class ConfigLoader {
         UnrestConfig.difficultyPreset = cfg.getString("difficultyPreset", GENERAL, "auto",
                 "auto follows the world difficulty.", new String[] {"auto", "easy", "normal", "hard"});
 
-        UnrestConfig.baseSeconds = d(METER, "baseSeconds", 30.0, 0.0, 10000.0, "BASE in T(r) = BASE + SCALE * (1 - r) / r");
-        UnrestConfig.scaleSeconds = d(METER, "scaleSeconds", 60.0, 0.0, 10000.0, "SCALE in T(r)");
-        UnrestConfig.capSeconds = d(METER, "capSeconds", 520.0, 1.0, 100000.0, "Longest possible fill time");
+        UnrestConfig.baseSeconds = d(METER, "baseSeconds", 20.0, 0.0, 10000.0, "BASE in T(r) = BASE + SCALE * (1 - r) / r");
+        UnrestConfig.scaleSeconds = d(METER, "scaleSeconds", 40.0, 0.0, 10000.0, "SCALE in T(r)");
+        UnrestConfig.capSeconds = d(METER, "capSeconds", 240.0, 1.0, 100000.0, "Longest possible fill time");
         UnrestConfig.wholeServerSeconds = d(METER, "wholeServerSeconds", 5.0, 0.0, 600.0, "Delay before a whole-server sleep skips");
         UnrestConfig.drainPerSecond = d(METER, "drainPerSecond", 0.016667, 0.0, 1.0, "Meter lost per second while nobody counts");
-        UnrestConfig.rampDoubleSeconds = d(METER, "rampDoubleSeconds", 75.0, 0.0, 100000.0,
+        UnrestConfig.rampDoubleSeconds = d(METER, "rampDoubleSeconds", 40.0, 0.0, 100000.0,
                 "The meter fills twice as fast every this many seconds someone is asleep, so a long wait always"
                         + " pays off. Counts down again while nobody is in bed. 0 turns the ramp off");
         UnrestConfig.rampMax = d(METER, "rampMax", 8.0, 1.0, 1000.0, "Most the ramp can speed the meter up");
+        UnrestConfig.maxSleepSeconds = d(METER, "maxSleepSeconds", 120.0, 0.0, 100000.0,
+                "The meter never sits below the share of this time someone has been asleep, so the night is skipped"
+                        + " after at most this long, whatever the dreams and night type. 0 = no limit");
 
         UnrestConfig.easyScale = d(PRESETS, "easyScale", 0.5, 0.01, 100.0, "Fill time multiplier on easy");
         UnrestConfig.normalScale = d(PRESETS, "normalScale", 0.75, 0.01, 100.0, "Fill time multiplier on normal");
@@ -109,11 +112,19 @@ public final class ConfigLoader {
         UnrestConfig.restlessBase = d(DREAMS, "restlessBase", 0.30, 0.0, 1.0, "");
         UnrestConfig.restlessPerRatio = d(DREAMS, "restlessPerRatio", -0.20, -1.0, 1.0, "");
         UnrestConfig.restlessPerDebt = d(DREAMS, "restlessPerDebt", 0.03, -1.0, 1.0, "");
-        UnrestConfig.nightmareBase = d(DREAMS, "nightmareBase", 0.03, 0.0, 1.0, "");
+        UnrestConfig.nightmareBase = d(DREAMS, "nightmareBase", 0.06, 0.0, 1.0, "");
         UnrestConfig.nightmarePerDebt = d(DREAMS, "nightmarePerDebt", 0.3, -10.0, 10.0, "");
-        UnrestConfig.nightmareMeterLoss = d(DREAMS, "nightmareMeterLoss", 0.05, 0.0, 1.0, "Meter lost on a Nightmare");
+        UnrestConfig.nightmareMeterLoss = d(DREAMS, "nightmareMeterLoss", 0.10, 0.0, 1.0, "Meter lost on a Nightmare");
+        UnrestConfig.deepWeight = d(DREAMS, "deepWeight", 2.0, 0.0, 10.0, "How much each sleeper counts after a Deep roll");
+        UnrestConfig.restlessWeight = d(DREAMS, "restlessWeight", 0.5, 0.0, 10.0,
+                "How much each sleeper counts after a Restless roll");
+        UnrestConfig.luckDeep = d(DREAMS, "luckDeep", 0.04, 0.0, 1.0,
+                "Deep chance added per point of the sleepers' combined Luck (Luck potion, Luck attribute)");
+        UnrestConfig.luckBad = d(DREAMS, "luckBad", 0.15, 0.0, 1.0,
+                "Share of the Restless and Nightmare chances removed per point of Luck (added per point of bad luck)");
+        UnrestConfig.luckMax = d(DREAMS, "luckMax", 5.0, 0.0, 100.0, "Combined Luck counts up to this much either way");
         UnrestConfig.dreamAnnounce = UnrestConfig.DreamAnnounce.fromId(cfg.getString("announce", DREAMS, "changes",
-                "Dream rolls in chat. off: never. changes: when a sleeper's dream changes (a first roll counts as a"
+                "The shared dream roll in chat. off: never. changes: when the dream changes (a first roll counts as a"
                         + " change from Normal). all: every roll. Nightmares are always announced while chat is on.",
                 new String[] {"off", "changes", "all"}));
         UnrestConfig.nightmareSound = cfg.getBoolean("nightmareSound", DREAMS, true,

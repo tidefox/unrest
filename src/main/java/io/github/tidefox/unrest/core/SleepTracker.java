@@ -158,9 +158,9 @@ public final class SleepTracker {
         return night;
     }
 
-    /** The sleeper's current dream, or null if they haven't rolled yet tonight. */
+    /** The sleepers' shared dream, or null if they haven't rolled yet. */
     public Dream dreamOf(UUID id) {
-        return dreams.hasRolled(id) ? dreams.dreamOf(id) : null;
+        return dreams.hasRolled() ? dreams.current() : null;
     }
 
     public NightWatch watch() {
@@ -211,10 +211,10 @@ public final class SleepTracker {
         if (s == n && wholeServerAllowed()) {
             return Math.max(0, Math.ceil(UnrestConfig.wholeServerSeconds) - wholeServerCount);
         }
-        double factor = SleepMath.nightFactor(night.type, (double) s / n);
-        if (factor <= 0) {
+        if (s == 0) {
             return natural;
         }
+        double factor = SleepMath.nightFactor(night.type, (double) s / n);
         double rEff = Math.min(1.0, dreams.weight(census.sleepers) / n);
         double meter = SleepMath.secondsToFull(data().getMeter(), rEff, factor,
                 UnrestConfig.presetScale(presetName(world)), rampSeconds);
@@ -620,17 +620,17 @@ public final class SleepTracker {
         } else if (UnrestConfig.dreamsEnabled) {
             if (secondsUntilRoll <= 0) {
                 secondsUntilRoll = Math.max(1, UnrestConfig.rollIntervalSeconds);
-                List<DreamRoller.Roll> rolls = dreams.roll(census.sleepers, r, data.getDebt(), rand);
-                if (UnrestConfig.chat) {
-                    ChatDisplay.dreams(world, rolls, r, data.getDebt());
-                }
-                for (DreamRoller.Roll roll : rolls) {
+                DreamRoller.Roll roll = dreams.roll(census.sleepers, r, data.getDebt(), rand);
+                if (roll != null) {
+                    if (UnrestConfig.chat) {
+                        ChatDisplay.dreams(world, roll, r, data.getDebt());
+                    }
                     if (roll.after == Dream.DEEP) {
                         night.deepDreams++;
                     } else if (roll.after == Dream.RESTLESS) {
                         night.restlessDreams++;
                     } else if (roll.after == Dream.NIGHTMARE) {
-                        nightmare(world, data, roll.player);
+                        nightmare(world, data, roll.woken);
                     }
                 }
             }
@@ -640,9 +640,11 @@ public final class SleepTracker {
         double rEff = Math.min(1.0, dreams.weight(census.sleepers) / n);
         double factor = SleepMath.nightFactor(night.type, r);
         double meter = data.getMeter();
+        double rate = 0.0;
         if (rEff > 0 && factor > 0) {
-            meter += SleepMath.meterStep(rEff, factor, UnrestConfig.presetScale(presetName(world)))
+            rate = SleepMath.meterStep(rEff, factor, UnrestConfig.presetScale(presetName(world)))
                     * SleepMath.ramp(rampSeconds);
+            meter += rate;
         } else {
             meter -= UnrestConfig.drainPerSecond;
         }
@@ -650,9 +652,12 @@ public final class SleepTracker {
         // patch, and winds back down while nobody does.
         rampSeconds = s > 0 ? rampSeconds + 1 : Math.max(0.0, rampSeconds - 1);
         meter += watched;
+        // The time limit: the meter never lags behind the share of
+        // maxSleepSeconds that someone has been asleep.
+        meter = Math.max(meter, SleepMath.meterFloor(rampSeconds));
         meter = Math.max(0.0, Math.min(1.0, meter));
-        showWatchFeedback(meter);
         data.setMeter(meter);
+        showWatchFeedback(world, meter, rate);
 
         if (UnrestConfig.sounds) {
             if (!chimed50 && meter >= 0.5) {
@@ -678,14 +683,12 @@ public final class SleepTracker {
         showDisplays(world, (float) meter);
     }
 
+    /** A Nightmare roll: the meter is set back and the unluckiest sleeper wakes. The chat line says so. */
     private void nightmare(WorldServer world, UnrestWorldData data, EntityPlayerMP p) {
         p.wakeUpPlayer(true, true, false);
         data.setMeter(Math.max(0.0, data.getMeter() - UnrestConfig.nightmareMeterLoss));
         night.nightmares++;
         quietWake.add(p.getUniqueID());
-        if (UnrestConfig.chat) {
-            ChatDisplay.nightmare(world, p);
-        }
         if (UnrestConfig.sounds && UnrestConfig.nightmareSound) {
             ParticleDisplay.nightmare(p);
         }
@@ -825,16 +828,22 @@ public final class SleepTracker {
         }
     }
 
-    private void showWatchFeedback(double meter) {
+    /**
+     * Tells each player who kept watch this second what it took off the wait:
+     * the meter they added divided by how fast the sleepers fill it right now.
+     */
+    private void showWatchFeedback(WorldServer world, double meter, double rate) {
         Map<UUID, Double> recent = watch.takeRecent();
-        if (!UnrestConfig.watchFeedback || recent.isEmpty()) {
+        if (!UnrestConfig.watchFeedback || recent.isEmpty() || meter >= 1.0) {
             return;
         }
+        double dawn = secondsToDawn(world);
         long until = System.currentTimeMillis() + 3000;
         for (Map.Entry<UUID, Double> e : recent.entrySet()) {
             EntityPlayerMP p = server.getPlayerList().getPlayerByUUID(e.getKey());
             if (p != null) {
-                ActionbarDisplay.watch(p, e.getValue(), watch.earned(e.getKey()), meter);
+                double saved = rate > 0 ? e.getValue() / rate : Double.NaN;
+                ActionbarDisplay.watch(p, e.getValue(), saved, watch.earned(e.getKey()), dawn);
                 watchShownUntil.put(e.getKey(), until);
             }
         }

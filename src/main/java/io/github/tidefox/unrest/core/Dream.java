@@ -1,23 +1,30 @@
 package io.github.tidefox.unrest.core;
 
-/** The result of one dream roll for one sleeper (DESIGN.md §4). */
-public enum Dream {
-    NORMAL(1.0, "Sound sleep"),
-    DEEP(2.0, "Deep sleep"),
-    RESTLESS(0.0, "Restless sleep"),
-    NIGHTMARE(0.0, "Nightmare");
+import io.github.tidefox.unrest.config.UnrestConfig;
 
-    private final double weight;
+/** The result of the sleepers' shared dream roll (DESIGN.md §4). */
+public enum Dream {
+    NORMAL("Sound sleep"),
+    DEEP("Deep sleep"),
+    RESTLESS("Restless sleep"),
+    NIGHTMARE("Nightmare");
+
     private final String label;
 
-    Dream(double weight, String label) {
-        this.weight = weight;
+    Dream(String label) {
         this.label = label;
     }
 
-    /** How much this sleeper counts towards the meter until the next roll. */
+    /** How much each sleeper counts towards the meter until the next roll. */
     public double weight() {
-        return weight;
+        switch (this) {
+            case DEEP:
+                return UnrestConfig.deepWeight;
+            case RESTLESS:
+                return UnrestConfig.restlessWeight;
+            default:
+                return 1.0;
+        }
     }
 
     /** Short name shown in the head menu and in chat hovers. */
@@ -25,17 +32,21 @@ public enum Dream {
         return label;
     }
 
-    /** What the dream does to the meter, for chat hovers. */
+    /** What the dream does to the meter, for chat. */
     public String effect() {
         switch (this) {
             case DEEP:
-                return "Counts as 2 sleepers until the next dream";
+                return "every sleeper counts " + fmt(UnrestConfig.deepWeight) + "x";
             case RESTLESS:
-                return "Doesn't count towards the meter until the next dream";
+                return "every sleeper counts " + fmt(UnrestConfig.restlessWeight) + "x";
             case NIGHTMARE:
-                return "Wakes the sleeper and sets the meter back";
+                return "dawn \u2212" + Math.round(UnrestConfig.nightmareMeterLoss * 100) + "%, the unluckiest sleeper wakes";
             default:
-                return "Counts as 1 sleeper";
+                return "every sleeper counts 1x";
         }
+    }
+
+    private static String fmt(double v) {
+        return v == Math.rint(v) ? Long.toString((long) v) : Double.toString(v);
     }
 }
