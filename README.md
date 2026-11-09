@@ -8,11 +8,11 @@ on a busy server still brings the dawn, but never takes more than 2 minutes.
 Each night has a randomly rolled character. Skipping without the whole server
 asleep builds **Unrest**, which makes later nights harder to skip.
 
-> **Status:** v1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
+> **Status:** v1.1 implemented, not yet tested on a live server. See [DESIGN.md](DESIGN.md).
 
 **Players and server admins:** see the [User Guide](docs/USER_GUIDE.md) for the game mechanics, commands and every config option.
 
-## Features (v1)
+## Features (v1.1)
 
 - **Sleep meter.** The time to dawn depends on the share of players asleep, and the meter speeds up the longer someone stays in bed. With everyone asleep it takes 5 seconds; with half the server asleep about 40 seconds; and nobody ever waits more than **2 minutes**.
 - **Night watch.** While someone sleeps, awake players bring the dawn closer by killing hostile mobs, mining and exploring new chunks, up to 20% each per night.

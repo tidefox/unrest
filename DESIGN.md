@@ -6,7 +6,7 @@ is skipped. Each night has a randomly rolled character, and skipping without
 the whole server asleep builds **Unrest**, which makes later nights harder to
 skip.
 
-This document is the build specification for version 1.
+This document is the build specification for version 1.1.
 
 ---
 
@@ -152,7 +152,7 @@ At world time 12541 the mod rolls one night type, weighted by the current Unrest
 | Night | Weight | Minimum | Meter multiplier | Extra rule |
 |---|---|---|---|---|
 | **Calm** | 25 − 4D | 5 | ×1.3 | — |
-| **Normal** | 45 − 3D | 20 | ×1.0 | — |
+| **Normal** | 40 − 3D | 20 | ×1.0 | — |
 | **Restless** | 22 + 4D | 0 | ×0.7 | — |
 | **Haunted** | 8 + 3D | 0 | ×0.6 | ×0.5 again if `r < 0.5` (§2.2) |
 | **Fever Dream** | 5 (×2 on a full moon) | 0 | ×1.0 | Rolls every 3–7s, every dream effect ×3, tension builds twice as fast (§4.3) |
@@ -692,6 +692,7 @@ before the meter filled.
 
 | Version | Content |
 |---|---|
-| **1.0** | Everything in this document, server-only. |
+| 1.0 | The sleep meter, night types, Unrest, per-sleeper dream rolls, hunger cost, anti-dodge, indicators. |
+| **1.1** | Everything in this document: the ramp and 2-minute limit, Night watch, the shared dream roll with Luck and the moon, momentum, double or nothing, the Reaper and Fever Dreams. |
 | 1.x | Tune the defaults using night-log data from live A/B testing. |
 | 2.0 (optional) | An optional client add-on that shows a row of sleeper heads under the bossbar. The server keeps working fully for clients without it. |
