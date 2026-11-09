@@ -10,10 +10,16 @@ import io.github.tidefox.unrest.display.ParticleDisplay;
 import io.github.tidefox.unrest.display.TabListDisplay;
 import io.github.tidefox.unrest.log.NightLog;
 import io.github.tidefox.unrest.Unrest;
+import net.minecraft.block.state.IBlockState;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.monster.IMob;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
+import net.minecraftforge.event.entity.living.LivingDeathEvent;
+import net.minecraftforge.event.world.BlockEvent;
+import net.minecraftforge.fml.common.eventhandler.EventPriority;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.relauncher.ReflectionHelper;
@@ -103,6 +109,11 @@ public final class SleepTracker {
     private final NightLog log;
     private final DreamRoller dreams = new DreamRoller();
     private final Leavers leavers = new Leavers();
+    private final NightWatch watch = new NightWatch();
+    /** Players who were just shown what their watch added, and until when (epoch millis). */
+    private final Map<UUID, Long> watchShownUntil = new HashMap<>();
+    /** Seconds someone has been asleep tonight, for the ramp (§2.2). */
+    private double rampSeconds;
     private Field allPlayersSleeping;
     private boolean vanillaBlockFailed;
     private final BossbarDisplay bossbar = new BossbarDisplay();
@@ -152,6 +163,10 @@ public final class SleepTracker {
         return dreams.hasRolled(id) ? dreams.dreamOf(id) : null;
     }
 
+    public NightWatch watch() {
+        return watch;
+    }
+
     public boolean isShownAsSleeper(UUID id) {
         return shownSleepers.contains(id);
     }
@@ -196,12 +211,13 @@ public final class SleepTracker {
         if (s == n && wholeServerAllowed()) {
             return Math.max(0, Math.ceil(UnrestConfig.wholeServerSeconds) - wholeServerCount);
         }
-        if (night.type == NightType.HAUNTED && (double) s / n < UnrestConfig.hauntedMinRatio) {
+        double factor = SleepMath.nightFactor(night.type, (double) s / n);
+        if (factor <= 0) {
             return natural;
         }
         double rEff = Math.min(1.0, dreams.weight(census.sleepers) / n);
-        double meter = SleepMath.secondsToFull(data().getMeter(), rEff, night.type.multiplier(),
-                UnrestConfig.presetScale(presetName(world)));
+        double meter = SleepMath.secondsToFull(data().getMeter(), rEff, factor,
+                UnrestConfig.presetScale(presetName(world)), rampSeconds);
         return Math.min(meter, natural);
     }
 
@@ -499,7 +515,10 @@ public final class SleepTracker {
         chimed90 = false;
         actionbarTimer = 0;
         particleTimer = 0;
+        rampSeconds = 0;
         dreams.clear();
+        watch.clear();
+        watchShownUntil.clear();
     }
 
     // ---- sleepers shown in chat and the tab list ----
@@ -580,6 +599,8 @@ public final class SleepTracker {
             return;
         }
         double r = (double) s / n;
+        trackExploring();
+        double watched = watch.takePending();
 
         if (s == n && wholeServerAllowed()) {
             dreams.clear();
@@ -617,14 +638,20 @@ public final class SleepTracker {
         }
 
         double rEff = Math.min(1.0, dreams.weight(census.sleepers) / n);
-        boolean blocked = night.type == NightType.HAUNTED && r < UnrestConfig.hauntedMinRatio;
+        double factor = SleepMath.nightFactor(night.type, r);
         double meter = data.getMeter();
-        if (rEff > 0 && !blocked) {
-            meter += SleepMath.meterStep(rEff, night.type.multiplier(), UnrestConfig.presetScale(presetName(world)));
+        if (rEff > 0 && factor > 0) {
+            meter += SleepMath.meterStep(rEff, factor, UnrestConfig.presetScale(presetName(world)))
+                    * SleepMath.ramp(rampSeconds);
         } else {
             meter -= UnrestConfig.drainPerSecond;
         }
+        // The ramp keeps building while anyone sleeps, even through a restless
+        // patch, and winds back down while nobody does.
+        rampSeconds = s > 0 ? rampSeconds + 1 : Math.max(0.0, rampSeconds - 1);
+        meter += watched;
         meter = Math.max(0.0, Math.min(1.0, meter));
+        showWatchFeedback(meter);
         data.setMeter(meter);
 
         if (UnrestConfig.sounds) {
@@ -678,7 +705,15 @@ public final class SleepTracker {
         }
         if (UnrestConfig.actionbar && actionbarTimer-- <= 0) {
             actionbarTimer = Math.max(1, UnrestConfig.actionbarIntervalSeconds) - 1;
-            ActionbarDisplay.nudge(census.counted, census.sleepers);
+            List<EntityPlayerMP> nudged = new ArrayList<>();
+            long now = System.currentTimeMillis();
+            for (EntityPlayerMP p : census.counted) {
+                Long until = watchShownUntil.get(p.getUniqueID());
+                if (until == null || until < now) {
+                    nudged.add(p);
+                }
+            }
+            ActionbarDisplay.nudge(nudged, census.sleepers, watchOpen());
         }
         if (UnrestConfig.particles && particleTimer-- <= 0) {
             particleTimer = 1;
@@ -745,7 +780,7 @@ public final class SleepTracker {
 
         if (active && UnrestConfig.chat) {
             ChatDisplay.skipSummary(world, s, n, done.type, done.seconds,
-                    done.deepDreams, done.restlessDreams, done.nightmares);
+                    done.deepDreams, done.restlessDreams, done.nightmares, watch.summary());
         }
 
         if (!done.storm) {
@@ -758,6 +793,81 @@ public final class SleepTracker {
         Set<UUID> old = shownSleepers;
         shownSleepers = new HashSet<>();
         refreshTabList(old);
+    }
+
+    // ---- night watch (§4.2) ----
+
+    /** Whether keeping watch counts right now: a night in active mode with someone asleep. */
+    private boolean watchOpen() {
+        return UnrestConfig.enabled && UnrestConfig.watchEnabled && UnrestConfig.mode == Mode.ACTIVE
+                && night != null && !census.sleepers.isEmpty();
+    }
+
+    /** Whether this player's deeds count: awake, counted and in the Overworld. */
+    private boolean onWatch(EntityPlayerMP p) {
+        return watchOpen() && p.dimension == 0 && !p.isPlayerSleeping()
+                && census.counted.contains(p) && !census.sleepers.contains(p);
+    }
+
+    private void trackExploring() {
+        if (!watchOpen() || UnrestConfig.watchChunk <= 0) {
+            return;
+        }
+        for (EntityPlayerMP p : census.counted) {
+            if (census.sleepers.contains(p) || p.isPlayerSleeping()) {
+                continue;
+            }
+            int cx = (int) Math.floor(p.posX) >> 4;
+            int cz = (int) Math.floor(p.posZ) >> 4;
+            if (watch.enterChunk(p.getUniqueID(), cx, cz)) {
+                watch.credit(p.getUniqueID(), p.getName(), UnrestConfig.watchChunk);
+            }
+        }
+    }
+
+    private void showWatchFeedback(double meter) {
+        Map<UUID, Double> recent = watch.takeRecent();
+        if (!UnrestConfig.watchFeedback || recent.isEmpty()) {
+            return;
+        }
+        long until = System.currentTimeMillis() + 3000;
+        for (Map.Entry<UUID, Double> e : recent.entrySet()) {
+            EntityPlayerMP p = server.getPlayerList().getPlayerByUUID(e.getKey());
+            if (p != null) {
+                ActionbarDisplay.watch(p, e.getValue(), watch.earned(e.getKey()), meter);
+                watchShownUntil.put(e.getKey(), until);
+            }
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onMobDeath(LivingDeathEvent e) {
+        if (UnrestConfig.watchKill <= 0 || !(e.getEntityLiving() instanceof IMob)
+                || e.getEntityLiving().world.isRemote) {
+            return;
+        }
+        Entity killer = e.getSource().getTrueSource();
+        if (killer instanceof EntityPlayerMP && onWatch((EntityPlayerMP) killer)) {
+            EntityPlayerMP p = (EntityPlayerMP) killer;
+            watch.credit(p.getUniqueID(), p.getName(), UnrestConfig.watchKill);
+        }
+    }
+
+    @SubscribeEvent(priority = EventPriority.LOWEST)
+    public void onBlockBroken(BlockEvent.BreakEvent e) {
+        if (UnrestConfig.watchBlock <= 0 || !(e.getPlayer() instanceof EntityPlayerMP)) {
+            return;
+        }
+        EntityPlayerMP p = (EntityPlayerMP) e.getPlayer();
+        if (p.isCreative() || !onWatch(p)) {
+            return;
+        }
+        IBlockState state = e.getState();
+        // Blocks that break at once (grass, flowers, torches) are too easy to farm.
+        if (state.getBlockHardness(e.getWorld(), e.getPos()) <= 0) {
+            return;
+        }
+        watch.credit(p.getUniqueID(), p.getName(), UnrestConfig.watchBlock);
     }
 
     private NightLog.Entry baseEntry(Night n, Outcome outcome, double debtAfter) {
@@ -773,6 +883,7 @@ public final class SleepTracker {
         e.afkCount = census.afk;
         e.peakSleepers = n.peakSleepers;
         e.nightmares = n.nightmares;
+        e.watchTotal = watch.total();
         return e;
     }
 }

@@ -17,7 +17,8 @@ import java.util.Locale;
 public final class NightLog {
 
     public static final String HEADER = "timestamp,mode,day,nightType,debtBefore,debtAfter,outcome,secondsToSkip,"
-            + "playersOnline,countedN,sleepersAtSkip,ratioAtSkip,afkCount,peakSleepers,nightmares,hungerLostTotal";
+            + "playersOnline,countedN,sleepersAtSkip,ratioAtSkip,afkCount,peakSleepers,nightmares,hungerLostTotal,"
+            + "watchTotal";
 
     /** One finished night. */
     public static final class Entry {
@@ -37,6 +38,8 @@ public final class NightLog {
         public int peakSleepers;
         public int nightmares;
         public int hungerLostTotal;
+        /** Meter added by awake players keeping watch (§4.2). */
+        public double watchTotal;
 
         public String toCsv() {
             return String.join(",",
@@ -55,7 +58,8 @@ public final class NightLog {
                     Integer.toString(afkCount),
                     Integer.toString(peakSleepers),
                     Integer.toString(nightmares),
-                    Integer.toString(hungerLostTotal));
+                    Integer.toString(hungerLostTotal),
+                    fmt(watchTotal));
         }
 
         private static String fmt(double v) {

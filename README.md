@@ -14,8 +14,9 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 
 ## Features (v1)
 
-- **Sleep meter.** The time to dawn depends on the share of players asleep. With everyone asleep it takes 5 seconds; with half the server asleep it takes about 1½ minutes; with only a few asleep it takes most of the night.
-- **Night types,** rolled at dusk: Calm, Normal, Restless or Haunted. A Haunted night needs at least half the server in bed.
+- **Sleep meter.** The time to dawn depends on the share of players asleep, and the meter speeds up the longer someone stays in bed. With everyone asleep it takes 5 seconds; with half the server asleep it takes about a minute; a lone sleeper on a big server waits about 3–4 minutes.
+- **Night watch.** While someone sleeps, awake players bring the dawn closer by killing hostile mobs, mining and exploring new chunks, up to 20% each per night.
+- **Night types,** rolled at dusk: Calm, Normal, Restless or Haunted. A Haunted night is much slower unless at least half the server is in bed.
 - **Unrest (Night Debt).** Partial skips build it up. A whole-server sleep, or a night that ends on its own with no skip, brings it down. Higher Unrest makes Restless and Haunted nights, and restless dreams, more likely.
 - **Dream rolls.** Every 15 seconds each sleeper rolls for Deep sleep, Restless sleep or a Nightmare, and chat tells everyone when someone's dream changes.
 - **Sleeping costs food.** Sleepers wake hungrier the more hours the skip covered. A skip never takes anyone below 3 food points.

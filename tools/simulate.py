@@ -20,6 +20,8 @@ BASE = 30.0                  # seconds
 SCALE = 60.0                 # seconds
 CAP = 520.0                  # seconds
 NIGHTMARE_METER_LOSS = 0.05
+RAMP_DOUBLE_SECONDS = 75.0   # fill speed doubles every this many seconds someone is asleep
+RAMP_MAX = 8.0               # the ramp never speeds the meter up more than this
 
 NIGHT_TYPES = {
     # name: (base weight, weight per debt, minimum weight, meter multiplier)
@@ -29,10 +31,17 @@ NIGHT_TYPES = {
     "haunted":  (8, 3, 0, 0.6),
 }
 HAUNTED_MIN_RATIO = 0.5
+HAUNTED_BELOW_RATIO_MULTIPLIER = 0.5   # extra slow-down below that ratio (0 = no fill)
 
 
 def fill_time(r):
     return min(CAP, BASE + SCALE * (1 - r) / r)
+
+
+def ramp(seconds):
+    if RAMP_DOUBLE_SECONDS <= 0:
+        return 1.0
+    return min(RAMP_MAX, 2 ** (seconds / RAMP_DOUBLE_SECONDS))
 
 
 def roll_night(debt):
@@ -55,7 +64,9 @@ def run_night(sleepers, players, debt):
         return 5
     night, mult = roll_night(debt)
     if night == "haunted" and r < HAUNTED_MIN_RATIO:
-        return None
+        if HAUNTED_BELOW_RATIO_MULTIPLIER <= 0:
+            return None
+        mult *= HAUNTED_BELOW_RATIO_MULTIPLIER
     deep, restless, nightmare = dream_chances(r, debt)
     meter, t = 0.0, 0
     out_until = [0] * sleepers
@@ -77,7 +88,7 @@ def run_night(sleepers, players, debt):
         r_eff = min(1.0, weight / players)
         rate = 0.0 if r_eff <= 0 else mult / fill_time(r_eff)
         for _ in range(ROLL_INTERVAL):
-            meter += rate
+            meter += rate * ramp(t)
             t += 1
             if meter >= 1:
                 return t
@@ -97,7 +108,7 @@ def main():
     ap.add_argument("--seed", type=int, default=1)
     args = ap.parse_args()
     random.seed(args.seed)
-    cases = [(3, 4), (2, 3), (1, 2), (2, 4), (1, 3), (1, 4), (1, 8)]
+    cases = [(3, 4), (2, 3), (1, 2), (2, 4), (1, 3), (1, 4), (1, 8), (1, 12)]
     print("| Asleep | Unrest 0 | Unrest 2 | Unrest 5 |")
     print("|---|---|---|---|")
     for s, n in cases:

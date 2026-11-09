@@ -29,13 +29,57 @@ public final class SleepMath {
         return nightMultiplier / (fillSeconds(rEff) * presetScale);
     }
 
-    /** Seconds left until the meter is full at the current rate, or infinity if it isn't filling. */
+    /** How much faster the meter fills after someone has been asleep for {@code seconds} (§2.2). */
+    public static double ramp(double seconds) {
+        if (UnrestConfig.rampDoubleSeconds <= 0) {
+            return 1.0;
+        }
+        double r = Math.pow(2.0, Math.max(0.0, seconds) / UnrestConfig.rampDoubleSeconds);
+        return Math.min(Math.max(1.0, UnrestConfig.rampMax), r);
+    }
+
+    /** Seconds left until the meter is full at the current rate, without the ramp. */
     public static double secondsToFull(double meter, double rEff, double nightMultiplier, double presetScale) {
         double step = meterStep(rEff, nightMultiplier, presetScale);
         if (step <= 0) {
             return Double.POSITIVE_INFINITY;
         }
         return Math.max(0.0, 1.0 - meter) / step;
+    }
+
+    /**
+     * Seconds left until the meter is full at the current rate, with the ramp
+     * carrying on from {@code rampSeconds}. Steps second by second, like the meter.
+     */
+    public static double secondsToFull(double meter, double rEff, double nightMultiplier, double presetScale,
+                                       double rampSeconds) {
+        double step = meterStep(rEff, nightMultiplier, presetScale);
+        if (step <= 0) {
+            return Double.POSITIVE_INFINITY;
+        }
+        double m = meter;
+        for (int t = 0; t < 100000; t++) {
+            if (m >= 1.0) {
+                return t;
+            }
+            m += step * ramp(rampSeconds + t);
+        }
+        return Double.POSITIVE_INFINITY;
+    }
+
+    /** Night multiplier, slowed further on a Haunted night below the required ratio (§3.1). */
+    public static double nightFactor(NightType type, double r) {
+        double m = type.multiplier();
+        if (type == NightType.HAUNTED && r < UnrestConfig.hauntedMinRatio) {
+            m *= UnrestConfig.hauntedBelowRatioMultiplier;
+        }
+        return m;
+    }
+
+    /** How much of a watch deed worth {@code amount} a player may still add, given what they've added already (§4.2). */
+    public static double watchCredit(double earned, double amount) {
+        double room = Math.max(0.0, UnrestConfig.watchMaxPerPlayer - earned);
+        return Math.max(0.0, Math.min(room, amount));
     }
 
     /** Roll weights of the night types for Unrest {@code debt} (§3.1), indexed by ordinal. */

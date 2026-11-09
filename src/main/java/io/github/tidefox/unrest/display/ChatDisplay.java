@@ -99,13 +99,24 @@ public final class ChatDisplay {
     }
 
     public static void skipSummary(WorldServer world, int s, int n, NightType type, int seconds,
-                                   int deep, int restless, int nightmares) {
+                                   int deep, int restless, int nightmares, List<String> watch) {
         String text = UnrestConfig.sun() + " The night passes. (" + s + "/" + n + " asleep, "
                 + type.displayName() + ", " + SleepMath.formatDuration(seconds) + ")";
         ITextComponent msg = colored(text, TextFormatting.GOLD);
+        StringBuilder hover = new StringBuilder();
         if (UnrestConfig.dreamsEnabled) {
-            msg.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponentString(
-                    "Dreams tonight:\nDeep " + deep + "\nRestless " + restless + "\nNightmares " + nightmares)));
+            hover.append("Dreams tonight:\nDeep ").append(deep).append("\nRestless ").append(restless)
+                    .append("\nNightmares ").append(nightmares);
+        }
+        if (!watch.isEmpty()) {
+            if (hover.length() > 0) {
+                hover.append("\n\n");
+            }
+            hover.append("Night watch:\n").append(String.join("\n", watch));
+        }
+        if (hover.length() > 0) {
+            msg.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                    new TextComponentString(hover.toString())));
         }
         toOverworld(world, msg);
     }

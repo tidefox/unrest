@@ -65,8 +65,9 @@ T(r) = min(T(r), CAP)                    CAP  = 520s
 | 1 of 8 | 7m 30s |
 | 1 of 10 or more | 8m 40s (cap) |
 
-A night lasts about 546 seconds. So a lone sleeper on a large server only
-skips the last few seconds of the night, and only if they went to bed at dusk.
+That is the starting fill time. The ramp (§2.2) speeds it up the longer
+someone sleeps, so even a lone sleeper on a large server reaches dawn in a
+few minutes (§12). A night lasts about 546 seconds.
 
 ### 2.2 Each second
 
@@ -74,17 +75,26 @@ skips the last few seconds of the night, and only if they went to bed at dusk.
 weight  = Σ dream-weight of each sleeper          (§4, normally 1.0 each)
 r_eff   = min(1.0, weight / N)
 if r_eff > 0:
-    meter += nightMultiplier / (T(r_eff) × presetScale)
+    meter += nightMultiplier / (T(r_eff) × presetScale) × ramp(rampSeconds)
 else:
     meter −= DRAIN_PER_SECOND                     (default 1/60: empty in 60s)
+rampSeconds = S > 0 ? rampSeconds + 1 : max(0, rampSeconds − 1)
+meter   += watch                                  (§4.2, added this second)
 meter    = clamp(meter, 0, 1)
 if meter ≥ 1: skip()                              (§2.4)
 ```
 
 - The `nightMultiplier` comes from the night type (§3).
 - `presetScale` comes from the difficulty preset (§8).
-- On a **Haunted** night with `r < 0.5`, the meter does not fill; it only drains.
-- The meter resets to 0 at the start of each night and after each skip.
+- `ramp(t) = min(RAMP_MAX, 2^(t / RAMP_DOUBLE))`, with `RAMP_DOUBLE = 75s`
+  and `RAMP_MAX = 8`. The speed doubles every 75 seconds that anyone is
+  asleep, so a long wait always pays off. It keeps building through Restless
+  dreams, winds back down while nobody sleeps, and resets with the meter.
+  `RAMP_DOUBLE = 0` turns it off.
+- On a **Haunted** night with `r < 0.5`, the night multiplier is multiplied
+  again by `hauntedBelowRatioMultiplier` (0.5, so ×0.3 in all). 0 restores the
+  hard block, where the meter only drains.
+- The meter and the ramp reset to 0 at the start of each night and after each skip.
 
 ### 2.3 Whole-server sleep
 
@@ -136,7 +146,7 @@ At world time 12541 the mod rolls one night type, weighted by the current Unrest
 | **Calm** | 25 − 4D | 5 | ×1.3 | — |
 | **Normal** | 45 − 3D | 20 | ×1.0 | — |
 | **Restless** | 22 + 4D | 0 | ×0.7 | — |
-| **Haunted** | 8 + 3D | 0 | ×0.6 | The meter only fills if `r ≥ 0.5` |
+| **Haunted** | 8 + 3D | 0 | ×0.6 | ×0.5 again if `r < 0.5` (§2.2) |
 
 The weights add up to 100 for any D from 0 to 5. At D = 0 the odds are
 25 / 45 / 22 / 8 %. At D = 5 they are 5 / 30 / 42 / 23 %.
@@ -210,6 +220,30 @@ down* (Restless → Normal), *stirs a little* (Deep → Normal) and *sleeps
 soundly*. Colours: Deep aqua, Restless yellow, Normal gray. Hovering over a
 name shows the dream and its effect; hovering over 💭 shows the current odds
 of each roll. With `indicators.chat = false` nothing is posted.
+
+### 4.2 Night watch
+
+Awake players don't only hold the night back; they can help. While **at
+least one sleeper** is counted, every awake, counted player in the Overworld
+(not in bed, not creative) adds to the meter by keeping watch:
+
+| Deed | Meter added | Detected by |
+|---|---|---|
+| Killing a hostile mob (`IMob`) | 0.03 | `LivingDeathEvent`, the true source is the player (arrows count) |
+| Entering a chunk for the first time tonight | 0.005 | Checked each second. The chunk the player was in when first seen doesn't count, and going back doesn't count again |
+| Breaking a block with hardness > 0 | 0.002 | `BlockEvent.BreakEvent`, not cancelled. Grass, flowers and torches break instantly and don't count |
+
+- Each player can add at most `nightWatch.maxPerPlayer` (0.20) per night, so
+  farms and strip-mining can't skip the night on their own.
+- Deeds are collected as they happen and added to the meter in the next
+  second-tick (§2.2), on any night type. During a whole-server sleep they are
+  discarded.
+- A skip helped by the watch is still a partial skip for Unrest.
+- Feedback: right after a deed, the player's actionbar shows
+  `Night watch +3% · dawn 64% · your share 12%`, and the 5-second nudge skips
+  them for 3 seconds. The nudge itself ends with `— or keep watch: fight,
+  mine, explore`. The skip summary's hover lists each helper's share.
+- The watch resets with the meter. Its total is logged as `watchTotal` (§9.2).
 
 ---
 
@@ -335,6 +369,8 @@ meter {
     D:capSeconds=520.0
     D:wholeServerSeconds=5.0
     D:drainPerSecond=0.016667
+    D:rampDoubleSeconds=75.0           # 0 = no ramp
+    D:rampMax=8.0
 }
 presets {
     D:easyScale=0.5
@@ -347,6 +383,7 @@ nights {
     I:restlessWeight=22    D:restlessPerDebt=4 I:restlessMin=0  D:restlessMultiplier=0.7
     I:hauntedWeight=8      D:hauntedPerDebt=3  I:hauntedMin=0   D:hauntedMultiplier=0.6
     D:hauntedMinRatio=0.5
+    D:hauntedBelowRatioMultiplier=0.5  # 0 = the meter doesn't fill below hauntedMinRatio
     B:hauntedAllowsWholeServerSleep=true
 }
 debt {
@@ -363,6 +400,11 @@ dreams {
     D:nightmareBase=0.03 D:nightmarePerDebt=0.3
     D:nightmareMeterLoss=0.05
     S:announce=changes   B:nightmareSound=true
+}
+nightWatch {
+    B:enabled=true
+    D:killHostile=0.03   D:breakBlock=0.002   D:newChunk=0.005
+    D:maxPerPlayer=0.20  B:feedback=true
 }
 hungerCost {
     B:enabled=true
@@ -414,7 +456,7 @@ to the file:
 ```
 timestamp,mode,day,nightType,debtBefore,debtAfter,outcome,secondsToSkip,
 playersOnline,countedN,sleepersAtSkip,ratioAtSkip,afkCount,peakSleepers,
-nightmares,hungerLostTotal
+nightmares,hungerLostTotal,watchTotal
 ```
 
 `outcome` is one of `whole_server`, `partial`, `natural`, `vanilla_skip` or
@@ -449,6 +491,7 @@ io.github.tidefox.unrest
 │   ├── SleepTracker.java       counts N/S each second, dream weights, meter, skip
 │   ├── NightRoller.java        night type roll at 12541, weights from debt
 │   ├── DreamRoller.java        per-sleeper rolls every 15s
+│   ├── NightWatch.java         awake players' deeds, capped per player (§4.2)
 │   ├── SkipHandler.java        time jump, wake, weather, hunger cost, debt update
 │   └── ActivityTracker.java    last-activity per UUID, AFK + active-before-bed
 ├── data/UnrestWorldData.java   WorldSavedData
@@ -469,17 +512,19 @@ io.github.tidefox.unrest
 
 Simulated with `tools/simulate.py`, 4,000 nights per cell. Each cell shows the
 median time to skip, with the 10th–90th percentile range in brackets. It
-assumes sleepers get into bed at dusk and stay there, on the Hard preset.
+assumes sleepers get into bed at dusk and stay there, on the Hard preset,
+with the ramp and nobody keeping watch (§4.2), which only makes it faster.
 
 | Asleep | Unrest 0 | Unrest 2 | Unrest 5 |
 |---|---|---|---|
-| 3 of 4 | 0:47 (0:30–1:13) | 0:59 (0:35–1:29) | 1:22 (0:50–2:01) |
-| 2 of 3 | 0:55 (0:32–1:29) | 1:10 (0:39–1:51) | 1:39 (0:57–2:30) |
-| 1 of 2 | 1:24 (0:44–2:16) | 1:45 (0:56–2:54) | 2:31 (1:24–4:01) |
-| 2 of 4 | 1:30 (0:57–2:23) | 1:56 (1:09–3:02) | 2:55 (1:45–4:10) |
-| 1 of 3 | 2:36 (1:40–3:57), 7% no skip | 3:15 (2:00–4:57), 15% no skip | 4:45 (2:54–6:56), 24% no skip |
-| 1 of 4 | 3:52 (2:33–5:51), 8% no skip | 4:56 (3:12–7:20), 15% no skip | 6:42 (4:26–8:32), 44% no skip |
-| 1 of 8 | 7:40 (6:04–8:49), 56% no skip | 8:06 (6:42–8:56), 85% no skip | 8:28 (7:03–9:00), 99% no skip |
+| 3 of 4 | 0:39 (0:27–0:56) | 0:46 (0:30–1:07) | 1:01 (0:41–1:26) |
+| 2 of 3 | 0:46 (0:27–1:08) | 0:54 (0:33–1:20) | 1:12 (0:45–1:41) |
+| 1 of 2 | 1:04 (0:36–1:35) | 1:16 (0:44–1:51) | 1:36 (1:00–2:18) |
+| 2 of 4 | 1:05 (0:44–1:34) | 1:19 (0:53–1:50) | 1:43 (1:11–2:17) |
+| 1 of 3 | 1:41 (1:09–2:33) | 1:58 (1:21–3:14) | 2:33 (1:45–3:57) |
+| 1 of 4 | 2:08 (1:35–3:08) | 2:28 (1:47–3:48) | 3:08 (2:17–4:53) |
+| 1 of 8 | 3:20 (2:43–4:33) | 3:46 (2:59–6:12) | 4:33 (3:31–7:43), 6% no skip |
+| 1 of 12 | 3:42 (3:05–4:52) | 4:10 (3:22–7:10), 3% no skip | 4:56 (3:51–7:19), 15% no skip |
 
 **Target:** with a third to half of the server asleep and low Unrest, most
 skips should take **1:00–2:30**. "No skip" means the night ended on its own

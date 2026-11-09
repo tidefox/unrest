@@ -49,7 +49,9 @@ it does nothing there except in singleplayer.
 2. **Players get into bed.** After the usual 5-second vanilla sleep timer they
    count as asleep, and the meter starts to fill.
 3. **The meter fills** at a speed set by how many players are asleep, the
-   night type, the difficulty preset and each sleeper's dreams.
+   night type, the difficulty preset and each sleeper's dreams. It speeds up
+   the longer someone sleeps, and awake players add to it by keeping watch
+   (fighting, mining, exploring).
 4. **At 100% the night is skipped.** Time jumps to the next morning, the
    weather clears, everyone in bed wakes up, sleepers lose some food, and
    Unrest goes up or down.
@@ -73,27 +75,53 @@ The time to fill the meter depends on the share of counted players asleep
 fill time = 30s + 60s × (1 − r) / r        capped at 520s
 ```
 
-| Asleep | Time to dawn (Hard preset, Normal night) |
+That is the **starting** speed. The longer someone stays asleep, the faster
+the meter fills: the speed **doubles every 75 seconds**, up to ×8. So staying
+in bed always pays off, and even a lone sleeper on a big server gets the dawn
+within a few minutes.
+
+| Asleep | Typical time to dawn (Hard preset, Unrest 0) |
 |---|---|
 | everyone | 5 seconds |
-| 3 of 4 | 50s |
-| 2 of 3 | 1:00 |
-| 1 of 2 | 1:30 |
-| 1 of 3 | 2:30 |
-| 1 of 4 | 3:30 |
-| 1 of 8 | 7:30 |
-| 1 of 10 or fewer | 8:40 (the cap) |
+| 3 of 4 | about 0:40 |
+| 1 of 2 | about 1:05 |
+| 1 of 3 | about 1:40 |
+| 1 of 4 | about 2:10 |
+| 1 of 8 | about 3:20 |
+| 1 of 12 | about 3:40 |
 
-A night lasts about 9 minutes (546 seconds). So on a big server, a single
-sleeper only shortens the night a little, and only if they went to bed at dusk.
+These include dream luck and the mix of night types; higher Unrest makes
+them longer (see DESIGN.md §12 for the full table). A night lasts about
+9 minutes (546 seconds). Awake players can bring the dawn closer still by
+keeping watch (below).
 
 - The **night type** multiplies the speed (×1.3 on Calm, ×0.6 on Haunted).
+- The **ramp** keeps building as long as anyone is asleep, even through a
+  Restless dream. While nobody is in bed it winds back down at the same rate.
 - The **difficulty preset** scales the time: Easy ×0.5, Normal ×0.75,
   Hard ×1.0. By default it follows the world difficulty.
 - If nobody is asleep (or every sleeper is having a Restless dream), the
   meter **drains**: from full to empty in 60 seconds.
 - The meter resets at the start of each night and after each skip.
 - Chimes play when it passes 50% and 90%.
+
+### Night watch: awake players help
+
+Staying up doesn't have to mean holding everyone back. While at least one
+player is asleep, every awake, counted player in the Overworld pushes the
+meter toward dawn by keeping watch:
+
+| Deed | Meter added |
+|---|---|
+| Killing a hostile mob (zombie, skeleton, creeper, …) | +3% |
+| Entering a chunk you haven't been in yet tonight | +0.5% |
+| Breaking a block (not ones that break instantly, like grass or torches) | +0.2% |
+
+Each awake player can add **up to 20%** a night. Their actionbar shows what
+they just added (`Night watch +3% · dawn 64% · your share 12%`), and hovering
+over the *night passes* message lists everyone's share. A watch-assisted skip
+is still a partial skip for Unrest. Nothing counts when nobody is asleep, and
+creative players don't count.
 
 ---
 
@@ -104,7 +132,7 @@ sleeper only shortens the night a little, and only if they went to bed at dusk.
 | **Calm** | 25% | 5% | ×1.3 | — |
 | **Normal** | 45% | 30% | ×1.0 | — |
 | **Restless** | 22% | 42% | ×0.7 | — |
-| **Haunted** | 8% | 23% | ×0.6 | The meter only fills if **at least half** of the counted players are asleep |
+| **Haunted** | 8% | 23% | ×0.6 | With **under half** of the counted players asleep, the meter fills at half that speed again (×0.3) |
 
 A whole-server sleep still skips a Haunted night (this can be turned off).
 
@@ -232,7 +260,7 @@ All of these use normal vanilla features, so they work on unmodded clients.
 |---|---|
 | **Bossbar** | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. Shown while anyone is in bed. Green on Calm, blue on Normal, yellow on Restless, red on Haunted. |
 | **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also dreams (`💭 Steve sinks into a deep sleep.`), Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
-| **Actionbar** | Awake players see `3 players are waiting for you to sleep` every 5 seconds. Nobody is named. |
+| **Actionbar** | Awake players see `3 players are waiting for you to sleep — or keep watch: fight, mine, explore` every 5 seconds. Nobody is named. Right after a watch deed they see what it added instead. |
 | **Tab list** | `[Zz]` before the names of sleepers. |
 | **Particles** | A small cloud above each sleeper. |
 | **Sounds** | A chime at 50% and at 90%. |
@@ -289,6 +317,8 @@ except `registerSleepAlias`, which needs a restart.
 | `capSeconds` | `520.0` | The longest fill time |
 | `wholeServerSeconds` | `5.0` | Delay before a whole-server sleep skips |
 | `drainPerSecond` | `0.016667` | How fast the meter empties when nobody is asleep (1/60 = 60s) |
+| `rampDoubleSeconds` | `75.0` | The fill speed doubles every this many seconds someone is asleep. `0` turns the ramp off |
+| `rampMax` | `8.0` | The most the ramp can speed the meter up |
 
 ### presets
 
@@ -311,7 +341,8 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 
 | Key | Default | Meaning |
 |---|---|---|
-| `hauntedMinRatio` | `0.5` | Share of counted players who must sleep for the meter to fill on a Haunted night |
+| `hauntedMinRatio` | `0.5` | Share of counted players asleep below which a Haunted night is slowed further |
+| `hauntedBelowRatioMultiplier` | `0.5` | Extra slow-down below `hauntedMinRatio`. `0` stops the meter filling (the old behaviour) |
 | `hauntedAllowsWholeServerSleep` | `true` | Whether a whole-server sleep skips a Haunted night |
 
 ### debt
@@ -335,6 +366,17 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `nightmareMeterLoss` | `0.05` | Meter lost on a Nightmare |
 | `announce` | `changes` | Dream rolls in chat: `off`, `changes` (only when a sleeper's dream changes) or `all` |
 | `nightmareSound` | `true` | A quiet sound for the player a Nightmare wakes (needs `indicators.sounds`) |
+
+### nightWatch
+
+| Key | Default | Meaning |
+|---|---|---|
+| `enabled` | `true` | Awake players add to the meter while someone sleeps |
+| `killHostile` | `0.03` | Meter added per hostile mob killed |
+| `breakBlock` | `0.002` | Meter added per block broken (instant-break blocks don't count) |
+| `newChunk` | `0.005` | Meter added per chunk a player enters for the first time that night |
+| `maxPerPlayer` | `0.20` | Most one awake player can add in a night |
+| `feedback` | `true` | Show players what their watch added, on the actionbar |
 
 ### hungerCost
 
@@ -387,11 +429,15 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 
 ### Tuning tips
 
-- **Too hard for a small group?** Lower `scaleSeconds` (e.g. 40), or set
+- **Too hard for a small group?** Lower `scaleSeconds` (e.g. 40) or
+  `rampDoubleSeconds` (e.g. 60), raise `nightWatch.maxPerPlayer`, or set
   `difficultyPreset=normal`.
-- **Lone sleepers on a big server should never skip?** Raise `capSeconds`
-  above the night length even on a Calm night (546s × 1.3 ≈ 710s, so e.g.
-  `750`). A small share asleep then hits the cap and the night ends first.
+- **Too easy now?** Raise `rampDoubleSeconds` or lower `rampMax`; set
+  `rampDoubleSeconds=0` for the original, steady meter.
+- **Lone sleepers on a big server should never skip?** Set
+  `rampDoubleSeconds=0` and raise `capSeconds` above the night length even on
+  a Calm night (546s × 1.3 ≈ 710s, so e.g. `750`). A small share asleep then
+  hits the cap and the night ends first.
 - **Unrest builds too fast?** Lower `partialSkipFactor` or raise
   `naturalNightRelief`.
 - **No surprises?** Set `dreams.enabled=false` and every `<type>Multiplier`
@@ -427,6 +473,7 @@ The log is `logs/unrest-nights.csv`, one row per night:
 | `peakSleepers` | Most sleepers at once that night |
 | `nightmares` | Nightmare wake-ups |
 | `hungerLostTotal` | Food points lost by all sleepers |
+| `watchTotal` | Meter added by awake players keeping watch (0.15 = 15%) |
 
 ---
 

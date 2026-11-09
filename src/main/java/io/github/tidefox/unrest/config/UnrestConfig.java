@@ -47,6 +47,10 @@ public final class UnrestConfig {
     public static double capSeconds = 520.0;
     public static double wholeServerSeconds = 5.0;
     public static double drainPerSecond = 1.0 / 60.0;
+    /** The fill speed doubles every this many seconds someone is asleep (0 = no ramp). */
+    public static double rampDoubleSeconds = 75.0;
+    /** The ramp never speeds the meter up more than this. */
+    public static double rampMax = 8.0;
 
     // presets
     public static double easyScale = 0.5;
@@ -59,6 +63,8 @@ public final class UnrestConfig {
     public static final double[] nightMin = {5, 20, 0, 0};
     public static final double[] nightMultiplier = {1.3, 1.0, 0.7, 0.6};
     public static double hauntedMinRatio = 0.5;
+    /** Extra fill multiplier on a Haunted night below hauntedMinRatio (0 = the meter doesn't fill). */
+    public static double hauntedBelowRatioMultiplier = 0.5;
     public static boolean hauntedAllowsWholeServerSleep = true;
 
     // debt
@@ -82,6 +88,14 @@ public final class UnrestConfig {
     public static double nightmareMeterLoss = 0.05;
     public static DreamAnnounce dreamAnnounce = DreamAnnounce.CHANGES;
     public static boolean nightmareSound = true;
+
+    // nightWatch: awake players help the sleepers
+    public static boolean watchEnabled = true;
+    public static double watchKill = 0.03;
+    public static double watchBlock = 0.002;
+    public static double watchChunk = 0.005;
+    public static double watchMaxPerPlayer = 0.20;
+    public static boolean watchFeedback = true;
 
     // hungerCost
     public static boolean hungerEnabled = true;

@@ -35,6 +35,33 @@ public class SleepMathTest {
     }
 
     @Test
+    public void rampDoublesAndIsCapped() {
+        assertEquals(1.0, SleepMath.ramp(0), EPS);
+        assertEquals(2.0, SleepMath.ramp(75), EPS);
+        assertEquals(4.0, SleepMath.ramp(150), EPS);
+        assertEquals(8.0, SleepMath.ramp(10000), EPS);
+    }
+
+    @Test
+    public void secondsToFullWithRampIsShorter() {
+        // No ramp yet built up: 1/90 a second from half full. The ramp shortens 45s.
+        double flat = SleepMath.secondsToFull(0.5, 0.5, 1.0, 1.0);
+        double ramped = SleepMath.secondsToFull(0.5, 0.5, 1.0, 1.0, 0);
+        assertTrue(ramped < flat);
+        assertTrue(ramped > 30);
+        // At the ramp cap it is 8 times as fast.
+        assertEquals(Math.ceil(45.0 / 8), SleepMath.secondsToFull(0.5, 0.5, 1.0, 1.0, 10000), 1e-6);
+        assertTrue(Double.isInfinite(SleepMath.secondsToFull(0.5, 0, 1.0, 1.0, 0)));
+    }
+
+    @Test
+    public void hauntedBelowRatioIsSlowerNotBlocked() {
+        assertEquals(0.6, SleepMath.nightFactor(NightType.HAUNTED, 0.5), EPS);
+        assertEquals(0.3, SleepMath.nightFactor(NightType.HAUNTED, 0.25), EPS);
+        assertEquals(0.7, SleepMath.nightFactor(NightType.RESTLESS, 0.25), EPS);
+    }
+
+    @Test
     public void nightWeightsAddUpTo100() {
         for (double d = 0; d <= 5.0; d += 0.25) {
             double sum = 0;

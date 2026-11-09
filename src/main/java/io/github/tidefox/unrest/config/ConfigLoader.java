@@ -18,6 +18,7 @@ public final class ConfigLoader {
     private static final String NIGHTS = "nights";
     private static final String DEBT = "debt";
     private static final String DREAMS = "dreams";
+    private static final String WATCH = "nightWatch";
     private static final String HUNGER = "hungerCost";
     private static final String AFK = "afk";
     private static final String ANTI_DODGE = "antiDodge";
@@ -72,6 +73,10 @@ public final class ConfigLoader {
         UnrestConfig.capSeconds = d(METER, "capSeconds", 520.0, 1.0, 100000.0, "Longest possible fill time");
         UnrestConfig.wholeServerSeconds = d(METER, "wholeServerSeconds", 5.0, 0.0, 600.0, "Delay before a whole-server sleep skips");
         UnrestConfig.drainPerSecond = d(METER, "drainPerSecond", 0.016667, 0.0, 1.0, "Meter lost per second while nobody counts");
+        UnrestConfig.rampDoubleSeconds = d(METER, "rampDoubleSeconds", 75.0, 0.0, 100000.0,
+                "The meter fills twice as fast every this many seconds someone is asleep, so a long wait always"
+                        + " pays off. Counts down again while nobody is in bed. 0 turns the ramp off");
+        UnrestConfig.rampMax = d(METER, "rampMax", 8.0, 1.0, 1000.0, "Most the ramp can speed the meter up");
 
         UnrestConfig.easyScale = d(PRESETS, "easyScale", 0.5, 0.01, 100.0, "Fill time multiplier on easy");
         UnrestConfig.normalScale = d(PRESETS, "normalScale", 0.75, 0.01, 100.0, "Fill time multiplier on normal");
@@ -85,6 +90,8 @@ public final class ConfigLoader {
             UnrestConfig.nightMultiplier[i] = d(NIGHTS, id + "Multiplier", DEFAULT_MULTIPLIER[i], 0.0, 100.0, "Meter speed multiplier");
         }
         UnrestConfig.hauntedMinRatio = d(NIGHTS, "hauntedMinRatio", 0.5, 0.0, 1.0, "Share of the server that must sleep on a Haunted night");
+        UnrestConfig.hauntedBelowRatioMultiplier = d(NIGHTS, "hauntedBelowRatioMultiplier", 0.5, 0.0, 1.0,
+                "Below hauntedMinRatio a Haunted night fills this much slower still. 0 stops the meter filling");
         UnrestConfig.hauntedAllowsWholeServerSleep = cfg.getBoolean("hauntedAllowsWholeServerSleep", NIGHTS, true,
                 "Whether a whole-server sleep skips a Haunted night");
 
@@ -111,6 +118,19 @@ public final class ConfigLoader {
                 new String[] {"off", "changes", "all"}));
         UnrestConfig.nightmareSound = cfg.getBoolean("nightmareSound", DREAMS, true,
                 "Play a sound to a player woken by a Nightmare (also needs indicators.sounds)");
+
+        UnrestConfig.watchEnabled = cfg.getBoolean("enabled", WATCH, true,
+                "While someone sleeps, awake players bring the dawn closer by keeping watch: killing hostile mobs,"
+                        + " mining and exploring");
+        UnrestConfig.watchKill = d(WATCH, "killHostile", 0.03, 0.0, 1.0, "Meter gained per hostile mob killed");
+        UnrestConfig.watchBlock = d(WATCH, "breakBlock", 0.002, 0.0, 1.0,
+                "Meter gained per block broken (blocks that break instantly, like grass and torches, don't count)");
+        UnrestConfig.watchChunk = d(WATCH, "newChunk", 0.005, 0.0, 1.0,
+                "Meter gained per chunk a player enters for the first time tonight");
+        UnrestConfig.watchMaxPerPlayer = d(WATCH, "maxPerPlayer", 0.20, 0.0, 1.0,
+                "Most of the meter one awake player can add in a night");
+        UnrestConfig.watchFeedback = cfg.getBoolean("feedback", WATCH, true,
+                "Show a player what their watch added, on the actionbar");
 
         UnrestConfig.hungerEnabled = cfg.getBoolean("enabled", HUNGER, true, "Sleepers lose food when the night is skipped");
         UnrestConfig.hoursPerPoint = d(HUNGER, "hoursPerPoint", 2.0, 0.1, 100.0, "Skipped hours per food point");
