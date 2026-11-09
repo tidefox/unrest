@@ -4,6 +4,8 @@ import io.github.tidefox.unrest.Unrest;
 import io.github.tidefox.unrest.config.ConfigLoader;
 import io.github.tidefox.unrest.config.UnrestConfig;
 import io.github.tidefox.unrest.config.UnrestConfig.Mode;
+import io.github.tidefox.unrest.core.Momentum;
+import io.github.tidefox.unrest.core.Moon;
 import io.github.tidefox.unrest.core.SleepMath;
 import io.github.tidefox.unrest.core.SleepTracker;
 import io.github.tidefox.unrest.display.ChatDisplay;
@@ -137,6 +139,17 @@ public final class UnrestCommand extends CommandBase {
                     ChatDisplay.nightColor(night.type)));
         }
         reply(sender, "Meter: " + Math.round(meter * 100) + "%");
+        int phase = world.getMoonPhase();
+        reply(sender, Moon.symbol(phase) + " " + Moon.name(phase) + ": dreams are " + Moon.mood(phase));
+        Momentum m = tracker.momentum();
+        if (m.tension() > 0 || m.chain() > 0) {
+            reply(sender, "Tension " + Math.round(m.tension()) + "/" + Math.round(UnrestConfig.tensionMax)
+                    + (m.chain() >= 2 ? ", Deep chain x" + m.chain() : ""));
+        }
+        if (tracker.reaper().active()) {
+            reply(sender, "\u2620 The Reaper hunts " + tracker.reaper().targetName() + " ("
+                    + SleepMath.formatDuration(tracker.reaper().secondsLeft()) + " left)");
+        }
         reply(sender, String.format("Unrest: %.2f / %.1f", debt, UnrestConfig.debtMax));
         reply(sender, "Asleep: " + c.sleepers.size() + " / " + c.n()
                 + " (preset " + tracker.presetName(world) + ", mode " + UnrestConfig.mode.id() + ")");

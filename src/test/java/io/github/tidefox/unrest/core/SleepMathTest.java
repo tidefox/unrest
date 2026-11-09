@@ -89,14 +89,19 @@ public class SleepMathTest {
         }
         double[] w0 = SleepMath.nightWeights(0);
         assertEquals(25, w0[0], EPS);
-        assertEquals(45, w0[1], EPS);
+        assertEquals(40, w0[1], EPS);
         assertEquals(22, w0[2], EPS);
         assertEquals(8, w0[3], EPS);
+        assertEquals(5, w0[4], EPS);
         double[] w5 = SleepMath.nightWeights(5);
         assertEquals(5, w5[0], EPS);
-        assertEquals(30, w5[1], EPS);
+        assertEquals(25, w5[1], EPS);
         assertEquals(42, w5[2], EPS);
         assertEquals(23, w5[3], EPS);
+        assertEquals(5, w5[4], EPS);
+        // A full moon doubles the Fever Dream weight.
+        assertEquals(10, SleepMath.nightWeights(0, 0)[4], EPS);
+        assertEquals(5, SleepMath.nightWeights(0, 4)[4], EPS);
     }
 
     @Test
@@ -108,9 +113,10 @@ public class SleepMathTest {
             counts[SleepMath.rollNight(0, rand).ordinal()]++;
         }
         assertEquals(0.25, counts[0] / (double) runs, 0.01);
-        assertEquals(0.45, counts[1] / (double) runs, 0.01);
+        assertEquals(0.40, counts[1] / (double) runs, 0.01);
         assertEquals(0.22, counts[2] / (double) runs, 0.01);
         assertEquals(0.08, counts[3] / (double) runs, 0.01);
+        assertEquals(0.05, counts[4] / (double) runs, 0.01);
     }
 
     @Test
@@ -150,6 +156,59 @@ public class SleepMathTest {
         assertEquals(5.0, SleepMath.groupLuck(new double[] {4, 4}), EPS);
         assertEquals(-5.0, SleepMath.groupLuck(new double[] {-9}), EPS);
         assertEquals(0.0, SleepMath.badLuckFactor(10), EPS);
+    }
+
+    @Test
+    public void moonPhaseMakesDreamsWildOrCalm() {
+        assertEquals(1.0, Moon.chaos(0), EPS);
+        assertEquals(-1.0, Moon.chaos(4), EPS);
+        assertEquals(0.0, Moon.chaos(2), EPS);
+        assertEquals(1.0, Moon.chaos(8), EPS);
+        assertEquals("Full Moon", Moon.name(0));
+        assertEquals("wild", Moon.mood(0));
+        assertEquals("calm", Moon.mood(4));
+        // Full moon: +5 points of Deep, bad rolls 25% likelier. New moon: the reverse.
+        assertEquals(0.25, SleepMath.deepChance(0.5, 0, 0, 1), EPS);
+        assertEquals(0.25, SleepMath.restlessChance(0.5, 0, 0, 1), EPS);
+        assertEquals(0.15, SleepMath.restlessChance(0.5, 0, 0, -1), EPS);
+    }
+
+    @Test
+    public void bandsPutDeepOnTop() {
+        double[] b = SleepMath.bands(0.5, 0, 0, 0);
+        assertEquals(3.0, b[0], 1e-6);
+        assertEquals(23.0, b[1], 1e-6);
+        assertEquals(80.0, b[2], 1e-6);
+        assertEquals(Dream.NIGHTMARE, SleepMath.dreamFor(2.9, b));
+        assertEquals(Dream.RESTLESS, SleepMath.dreamFor(3.0, b));
+        assertEquals(Dream.NORMAL, SleepMath.dreamFor(50, b));
+        assertEquals(Dream.DEEP, SleepMath.dreamFor(80, b));
+        assertEquals(1.0, SleepMath.nearMiss(79, b), 1e-6);
+    }
+
+    @Test
+    public void rubberBandHelpsWhenBehindAndHurtsWhenFarAhead() {
+        // Riding the 2-minute line: +2 Luck.
+        assertEquals(2.0, SleepMath.rubberLuck(0.5, 60), EPS);
+        // A quarter ahead: neutral.
+        assertEquals(0.0, SleepMath.rubberLuck(0.75, 60), EPS);
+        // Half or more ahead: −2 Luck.
+        assertEquals(-2.0, SleepMath.rubberLuck(0.9, 0), EPS);
+    }
+
+    @Test
+    public void gambleAndIntervals() {
+        assertEquals(0.5, SleepMath.gambleWinChance(0), EPS);
+        assertEquals(0.6, SleepMath.gambleWinChance(2), EPS);
+        assertEquals(0.75, SleepMath.gambleWinChance(20), EPS);
+        assertEquals(0.25, SleepMath.gambleWinChance(-20), EPS);
+        Random rand = new Random(4);
+        for (int i = 0; i < 1000; i++) {
+            int n = SleepMath.rollInterval(false, rand);
+            assertTrue(n >= 8 && n <= 22);
+            int f = SleepMath.rollInterval(true, rand);
+            assertTrue(f >= 3 && f <= 7);
+        }
     }
 
     @Test

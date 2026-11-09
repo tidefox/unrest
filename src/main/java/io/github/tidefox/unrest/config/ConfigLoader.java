@@ -19,6 +19,9 @@ public final class ConfigLoader {
     private static final String DEBT = "debt";
     private static final String DREAMS = "dreams";
     private static final String WATCH = "nightWatch";
+    private static final String MOMENTUM = "momentum";
+    private static final String MOON = "moon";
+    private static final String REAPER = "reaper";
     private static final String HUNGER = "hungerCost";
     private static final String AFK = "afk";
     private static final String ANTI_DODGE = "antiDodge";
@@ -26,11 +29,11 @@ public final class ConfigLoader {
     private static final String COMMANDS = "commands";
     private static final String LOGGING = "logging";
 
-    private static final String[] NIGHT_IDS = {"calm", "normal", "restless", "haunted"};
-    private static final double[] DEFAULT_WEIGHT = {25, 45, 22, 8};
-    private static final double[] DEFAULT_PER_DEBT = {-4, -3, 4, 3};
-    private static final double[] DEFAULT_MIN = {5, 20, 0, 0};
-    private static final double[] DEFAULT_MULTIPLIER = {1.3, 1.0, 0.7, 0.6};
+    private static final String[] NIGHT_IDS = {"calm", "normal", "restless", "haunted", "fever"};
+    private static final double[] DEFAULT_WEIGHT = {25, 40, 22, 8, 5};
+    private static final double[] DEFAULT_PER_DEBT = {-4, -3, 4, 3, 0};
+    private static final double[] DEFAULT_MIN = {5, 20, 0, 0, 0};
+    private static final double[] DEFAULT_MULTIPLIER = {1.3, 1.0, 0.7, 0.6, 1.0};
 
     private static Configuration cfg;
 
@@ -95,6 +98,13 @@ public final class ConfigLoader {
         UnrestConfig.hauntedMinRatio = d(NIGHTS, "hauntedMinRatio", 0.5, 0.0, 1.0, "Share of the server that must sleep on a Haunted night");
         UnrestConfig.hauntedBelowRatioMultiplier = d(NIGHTS, "hauntedBelowRatioMultiplier", 0.5, 0.0, 1.0,
                 "Below hauntedMinRatio a Haunted night fills this much slower still. 0 stops the meter filling");
+        UnrestConfig.feverIntensity = d(NIGHTS, "feverIntensity", 3.0, 1.0, 10.0,
+                "On a Fever Dream every dream effect is this many times as strong (Deep 2x becomes 4x, Restless"
+                        + " 0.5x becomes 0x), and tension builds twice as fast");
+        UnrestConfig.feverRollMinSeconds = cfg.getInt("feverRollMinSeconds", NIGHTS, 3, 1, 3600, "Shortest gap between rolls on a Fever Dream");
+        UnrestConfig.feverRollMaxSeconds = cfg.getInt("feverRollMaxSeconds", NIGHTS, 7, 1, 3600, "Longest gap between rolls on a Fever Dream");
+        UnrestConfig.feverFullMoonBonus = d(NIGHTS, "feverFullMoonBonus", 2.0, 0.0, 100.0,
+                "The Fever Dream roll weight is multiplied by this on a full moon (needs moon.enabled)");
         UnrestConfig.hauntedAllowsWholeServerSleep = cfg.getBoolean("hauntedAllowsWholeServerSleep", NIGHTS, true,
                 "Whether a whole-server sleep skips a Haunted night");
 
@@ -104,7 +114,12 @@ public final class ConfigLoader {
         UnrestConfig.naturalNightRelief = d(DEBT, "naturalNightRelief", 1.0, 0.0, 100.0, "D lost when a night ends on its own");
 
         UnrestConfig.dreamsEnabled = cfg.getBoolean("enabled", DREAMS, true, "Turns dream rolls on or off");
-        UnrestConfig.rollIntervalSeconds = cfg.getInt("rollIntervalSeconds", DREAMS, 15, 1, 3600, "Seconds between dream rolls");
+        UnrestConfig.rollMinSeconds = cfg.getInt("rollMinSeconds", DREAMS, 8, 1, 3600, "Shortest gap between shared rolls");
+        UnrestConfig.rollMaxSeconds = cfg.getInt("rollMaxSeconds", DREAMS, 22, 1, 3600,
+                "Longest gap between shared rolls. Each gap is random in between, so nobody knows when the next comes");
+        UnrestConfig.spin = cfg.getString("spin", DREAMS, "sleepers",
+                "Who sees the rolling number as a title before each roll: sleepers, all (everyone in the Overworld) or off",
+                new String[] {"sleepers", "all", "off"});
         UnrestConfig.deepBase = d(DREAMS, "deepBase", 0.10, 0.0, 1.0, "");
         UnrestConfig.deepPerRatio = d(DREAMS, "deepPerRatio", 0.20, -1.0, 1.0, "");
         UnrestConfig.deepPerDebt = d(DREAMS, "deepPerDebt", -0.02, -1.0, 1.0, "");
@@ -129,6 +144,40 @@ public final class ConfigLoader {
                 new String[] {"off", "changes", "all"}));
         UnrestConfig.nightmareSound = cfg.getBoolean("nightmareSound", DREAMS, true,
                 "Play a sound to a player woken by a Nightmare (also needs indicators.sounds)");
+
+        UnrestConfig.tensionEnabled = cfg.getBoolean("tension", MOMENTUM, true,
+                "Restless and Nightmare rolls store tension; the next Deep roll releases it as a burst of meter");
+        UnrestConfig.tensionPerBadRoll = d(MOMENTUM, "tensionPerBadRoll", 1.0, 0.0, 100.0, "Tension stored per bad roll");
+        UnrestConfig.tensionMax = d(MOMENTUM, "tensionMax", 5.0, 0.0, 100.0, "Most tension that can be stored");
+        UnrestConfig.tensionPayout = d(MOMENTUM, "tensionPayout", 0.08, 0.0, 1.0, "Meter added per point of tension released");
+        UnrestConfig.chainEnabled = cfg.getBoolean("chains", MOMENTUM, true,
+                "Deep rolls in a row count 2x, then 3x, then 4x");
+        UnrestConfig.chainMaxWeight = d(MOMENTUM, "chainMaxWeight", 4.0, 1.0, 100.0, "Most a Deep chain can count each sleeper");
+        UnrestConfig.nightTerrorStreak = cfg.getInt("nightTerrorStreak", MOMENTUM, 3, 0, 100,
+                "This many Restless rolls in a row become a Night terror: a Nightmare, then a guaranteed Deep roll. 0 = never");
+        UnrestConfig.rubberBand = d(MOMENTUM, "rubberBand", 2.0, 0.0, 10.0,
+                "Luck added when the meter lags behind the 2-minute line, taken when it leads by a lot. 0 = off");
+        UnrestConfig.doubleOrNothing = cfg.getBoolean("doubleOrNothing", MOMENTUM, true,
+                "Once a night, when the meter passes gambleAt, a countdown and a coin flip: jump to gambleWinMeter or"
+                        + " fall to gambleLoseMeter with the ramp doubled");
+        UnrestConfig.gambleAt = d(MOMENTUM, "gambleAt", 0.5, 0.0, 1.0, "Meter at which double or nothing starts");
+        UnrestConfig.gambleCountdownSeconds = cfg.getInt("gambleCountdownSeconds", MOMENTUM, 5, 0, 60, "Countdown before the flip");
+        UnrestConfig.gambleWinMeter = d(MOMENTUM, "gambleWinMeter", 0.9, 0.0, 1.0, "Meter after a win");
+        UnrestConfig.gambleLoseMeter = d(MOMENTUM, "gambleLoseMeter", 0.25, 0.0, 1.0, "Meter after a loss (the 2-minute limit still holds)");
+        UnrestConfig.gambleLuck = d(MOMENTUM, "gambleLuck", 0.05, 0.0, 0.5, "Win chance added per point of the sleepers' Luck");
+
+        UnrestConfig.moonEnabled = cfg.getBoolean("enabled", MOON, true,
+                "The moon phase colours the night's dreams: a full moon makes them wild, a new moon calm");
+        UnrestConfig.moonDeep = d(MOON, "moonDeep", 0.05, 0.0, 1.0, "Deep chance added per point of moon chaos (+1 full, -1 new)");
+        UnrestConfig.moonBad = d(MOON, "moonBad", 0.25, 0.0, 1.0, "Share added to the Restless and Nightmare chances per point of chaos");
+
+        UnrestConfig.reaperEnabled = cfg.getBoolean("enabled", REAPER, true,
+                "A Nightmare sends the Reaper (a wither skeleton with a hoe) after an awake player. Kill it in time to"
+                        + " bring the dawn closer");
+        UnrestConfig.reaperSeconds = cfg.getInt("seconds", REAPER, 60, 5, 3600, "How long the Reaper hunts before it fades");
+        UnrestConfig.reaperReward = d(REAPER, "reward", 0.20, 0.0, 1.0, "Meter added when a player kills the Reaper");
+        UnrestConfig.reaperPenalty = d(REAPER, "penalty", 0.05, 0.0, 1.0, "Meter lost when the Reaper fades unkilled");
+        UnrestConfig.reaperHealth = d(REAPER, "health", 30.0, 1.0, 1024.0, "The Reaper's health (a wither skeleton has 20)");
 
         UnrestConfig.watchEnabled = cfg.getBoolean("enabled", WATCH, true,
                 "While someone sleeps, awake players bring the dawn closer by keeping watch: killing hostile mobs,"
@@ -175,6 +224,8 @@ public final class ConfigLoader {
         UnrestConfig.particles = cfg.getBoolean("particles", INDICATORS, true, "");
         UnrestConfig.sounds = cfg.getBoolean("sounds", INDICATORS, true, "");
         UnrestConfig.asciiOnly = cfg.getBoolean("asciiOnly", INDICATORS, false, "Replace the moon and sun symbols with text");
+        UnrestConfig.lightning = cfg.getBoolean("lightning", INDICATORS, true,
+                "Harmless lightning (no fire, no damage) for jackpots, the Reaper and Fever Dreams");
 
         UnrestConfig.registerSleepAlias = cfg.getBoolean("registerSleepAlias", COMMANDS, true, "Also register /sleep (needs a restart)");
 

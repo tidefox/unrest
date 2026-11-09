@@ -59,11 +59,17 @@ public final class UnrestConfig {
     public static double normalScale = 0.75;
     public static double hardScale = 1.0;
 
-    // nights, indexed by NightType.ordinal(): calm, normal, restless, haunted
-    public static final double[] nightWeight = {25, 45, 22, 8};
-    public static final double[] nightPerDebt = {-4, -3, 4, 3};
-    public static final double[] nightMin = {5, 20, 0, 0};
-    public static final double[] nightMultiplier = {1.3, 1.0, 0.7, 0.6};
+    // nights, indexed by NightType.ordinal(): calm, normal, restless, haunted, fever
+    public static final double[] nightWeight = {25, 40, 22, 8, 5};
+    public static final double[] nightPerDebt = {-4, -3, 4, 3, 0};
+    public static final double[] nightMin = {5, 20, 0, 0, 0};
+    public static final double[] nightMultiplier = {1.3, 1.0, 0.7, 0.6, 1.0};
+    /** Fever Dream: how much wilder every dream effect is, and the roll interval. */
+    public static double feverIntensity = 3.0;
+    public static int feverRollMinSeconds = 3;
+    public static int feverRollMaxSeconds = 7;
+    /** The Fever Dream weight is multiplied by this on a full moon. */
+    public static double feverFullMoonBonus = 2.0;
     public static double hauntedMinRatio = 0.5;
     /** Extra fill multiplier on a Haunted night below hauntedMinRatio (0 = the meter doesn't fill). */
     public static double hauntedBelowRatioMultiplier = 0.5;
@@ -77,7 +83,11 @@ public final class UnrestConfig {
 
     // dreams
     public static boolean dreamsEnabled = true;
-    public static int rollIntervalSeconds = 15;
+    /** Each shared roll comes a random number of seconds after the last, in this range. */
+    public static int rollMinSeconds = 8;
+    public static int rollMaxSeconds = 22;
+    /** Who sees the rolling number as a title: sleepers, all or off. */
+    public static String spin = "sleepers";
     public static double deepBase = 0.10;
     public static double deepPerRatio = 0.20;
     public static double deepPerDebt = -0.02;
@@ -99,6 +109,41 @@ public final class UnrestConfig {
     public static double luckMax = 5.0;
     public static DreamAnnounce dreamAnnounce = DreamAnnounce.CHANGES;
     public static boolean nightmareSound = true;
+
+    // momentum (DESIGN.md §4.3)
+    public static boolean tensionEnabled = true;
+    public static double tensionPerBadRoll = 1.0;
+    public static double tensionMax = 5.0;
+    /** Meter added per point of tension when a Deep roll releases it. */
+    public static double tensionPayout = 0.08;
+    public static boolean chainEnabled = true;
+    /** Deep rolls in a row count 2x, 3x, 4x… up to this. */
+    public static double chainMaxWeight = 4.0;
+    /** Restless rolls in a row that turn into a Night terror (0 = never). */
+    public static int nightTerrorStreak = 3;
+    /** Luck points the rubber band adds at most when the meter lags (and takes when it leads). 0 = off. */
+    public static double rubberBand = 2.0;
+    public static boolean doubleOrNothing = true;
+    public static double gambleAt = 0.5;
+    public static int gambleCountdownSeconds = 5;
+    public static double gambleWinMeter = 0.9;
+    public static double gambleLoseMeter = 0.25;
+    /** Win chance added per point of Luck, around 50%. */
+    public static double gambleLuck = 0.05;
+
+    // moon (DESIGN.md §3.3)
+    public static boolean moonEnabled = true;
+    /** Deep chance added per point of moon chaos (+1 full moon, −1 new moon). */
+    public static double moonDeep = 0.05;
+    /** Share added to the bad rolls per point of moon chaos. */
+    public static double moonBad = 0.25;
+
+    // reaper (DESIGN.md §4.4)
+    public static boolean reaperEnabled = true;
+    public static int reaperSeconds = 60;
+    public static double reaperReward = 0.20;
+    public static double reaperPenalty = 0.05;
+    public static double reaperHealth = 30.0;
 
     // nightWatch: awake players help the sleepers
     public static boolean watchEnabled = true;
@@ -137,6 +182,8 @@ public final class UnrestConfig {
     public static boolean particles = true;
     public static boolean sounds = true;
     public static boolean asciiOnly = false;
+    /** Harmless lightning (no fire, no damage) for jackpots, the Reaper and Fever Dreams. */
+    public static boolean lightning = true;
 
     // commands
     public static boolean registerSleepAlias = true;

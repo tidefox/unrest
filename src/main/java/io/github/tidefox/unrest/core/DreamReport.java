@@ -94,11 +94,15 @@ public final class DreamReport {
         return oddsPercent(r, debt, 0);
     }
 
-    /** Per-roll odds as whole percentages, in roll order: nightmare, restless, deep, normal. */
     public static int[] oddsPercent(double r, double debt, double luck) {
-        double nightmare = Math.min(1.0, SleepMath.nightmareChance(r, debt, luck));
-        double restless = Math.min(1.0 - nightmare, SleepMath.restlessChance(r, debt, luck));
-        double deep = Math.min(1.0 - nightmare - restless, SleepMath.deepChance(r, debt, luck));
+        return oddsPercent(r, debt, luck, 0);
+    }
+
+    /** Per-roll odds as whole percentages, in roll order: nightmare, restless, deep, normal. */
+    public static int[] oddsPercent(double r, double debt, double luck, double chaos) {
+        double nightmare = Math.min(1.0, SleepMath.nightmareChance(r, debt, luck, chaos));
+        double restless = Math.min(1.0 - nightmare, SleepMath.restlessChance(r, debt, luck, chaos));
+        double deep = Math.min(1.0 - nightmare - restless, SleepMath.deepChance(r, debt, luck, chaos));
         double normal = Math.max(0.0, 1.0 - nightmare - restless - deep);
         return new int[] {
             (int) Math.round(nightmare * 100), (int) Math.round(restless * 100),

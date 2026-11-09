@@ -9,7 +9,8 @@ public enum NightType {
     CALM("Calm Night", "The night is calm."),
     NORMAL("Normal Night", "Night falls."),
     RESTLESS("Restless Night", "The night feels restless…"),
-    HAUNTED("Haunted Night", "Something is wrong with this night.");
+    HAUNTED("Haunted Night", "Something is wrong with this night."),
+    FEVER("Fever Dream", "The air shimmers. A fever dream takes hold…");
 
     private final String displayName;
     private final String announcement;
