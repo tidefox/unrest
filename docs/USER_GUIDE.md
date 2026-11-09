@@ -45,7 +45,7 @@ it does nothing there except in singleplayer.
 ## 2. How a night works
 
 1. **Dusk (time 12541).** The night's type is rolled: Calm, Normal, Restless
-   or Haunted. It's announced in chat.
+   or Haunted. It shows on the bossbar (and in chat if `indicators.announceNight` is on).
 2. **Players get into bed.** After the usual 5-second vanilla sleep timer they
    count as asleep, and the meter starts to fill.
 3. **The meter fills** at a speed set by how many players are asleep, the
@@ -108,7 +108,7 @@ sleeper only shortens the night a little, and only if they went to bed at dusk.
 
 A whole-server sleep still skips a Haunted night (this can be turned off).
 
-Chat messages at dusk:
+Chat messages at dusk, only if `indicators.announceNight` is on (it is off by default):
 
 - Calm: *The night is calm.*
 - Normal: *Night falls.*
@@ -223,7 +223,7 @@ All of these use normal vanilla features, so they work on unmodded clients.
 | Where | What |
 |---|---|
 | **Bossbar** | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. Shown while anyone is in bed. Green on Calm, blue on Normal, yellow on Restless, red on Haunted. |
-| **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also the night roll, dreams (`💭 Steve sinks into a deep sleep.`), Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
+| **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also dreams (`💭 Steve sinks into a deep sleep.`), Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
 | **Actionbar** | Awake players see `3 players are waiting for you to sleep` every 5 seconds. Nobody is named. |
 | **Tab list** | `[Zz]` before the names of sleepers. |
 | **Particles** | A small cloud above each sleeper. |
@@ -353,6 +353,7 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `alwaysAtNight` | `false` | Show the bossbar all night, not only while someone is in bed |
 | `maxNames` | `3` | Sleeper names on the bossbar before `+N` |
 | `chat` | `true` | Chat messages |
+| `announceNight` | `false` | Also post the night type in chat at dusk (*Night falls.*, *The night is calm.*). The bossbar and `/unrest` show it either way. |
 | `actionbar` | `true` | The "players are waiting" nudge |
 | `actionbarIntervalSeconds` | `5` | How often the nudge is shown |
 | `tabList` | `true` | The `[Zz]` tag |

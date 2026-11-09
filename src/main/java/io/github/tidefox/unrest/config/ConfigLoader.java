@@ -125,6 +125,8 @@ public final class ConfigLoader {
         UnrestConfig.bossbarAlwaysAtNight = cfg.getBoolean("alwaysAtNight", INDICATORS, false, "Show the bossbar all night");
         UnrestConfig.bossbarMaxNames = cfg.getInt("maxNames", INDICATORS, 3, 0, 20, "Sleeper names on the bossbar");
         UnrestConfig.chat = cfg.getBoolean("chat", INDICATORS, true, "");
+        UnrestConfig.announceNight = cfg.getBoolean("announceNight", INDICATORS, false,
+                "Post the night type in chat at dusk (\"Night falls.\"). The bossbar and /unrest show it either way.");
         UnrestConfig.actionbar = cfg.getBoolean("actionbar", INDICATORS, true, "");
         UnrestConfig.actionbarIntervalSeconds = cfg.getInt("actionbarIntervalSeconds", INDICATORS, 5, 1, 3600, "");
         UnrestConfig.tabList = cfg.getBoolean("tabList", INDICATORS, true, "");

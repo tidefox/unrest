@@ -137,7 +137,7 @@ The weights add up to 100 for any D from 0 to 5. At D = 0 the odds are
 
 If a thunderstorm lets players sleep before 12541, that day uses **Normal**.
 
-The roll is announced in chat and shown on the bossbar (§7):
+The roll is shown on the bossbar (§7). With `indicators.announceNight = true` (off by default) it is also posted in chat:
 - Calm: `The night is calm.`
 - Normal: `Night falls.`
 - Restless: `The night feels restless…`
@@ -251,7 +251,7 @@ last-activity time is kept in memory only.
 |---|---|---|
 | **Bossbar** (`BossInfoServer`, `NOTCHED_10`) | Counted players in the Overworld while at least one player is in bed (`bossbar.alwaysAtNight` makes it show for the whole night) | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. The bar shows the meter. Colour by night type: Calm green, Normal blue, Restless yellow, Haunted red. Up to `bossbar.maxNames` (3) names, then `+N`. |
 | **Chat: into or out of bed** | Everyone in the Overworld | `Steve lies down (3/7) — dawn in ~1:20`. Hovering over it lists who is asleep and who is awake. |
-| **Chat: events** | Everyone in the Overworld | The night roll, dream rolls (§4.1), Nightmare wake-ups, and the skip summary. Hovering over the skip summary shows the night's Deep, Restless and Nightmare counts. |
+| **Chat: events** | Everyone in the Overworld | The night roll (only with `indicators.announceNight`, off by default), dream rolls (§4.1), Nightmare wake-ups, and the skip summary. Hovering over the skip summary shows the night's Deep, Restless and Nightmare counts. |
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
 | **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
@@ -347,7 +347,8 @@ afk {
 }
 indicators {
     B:bossbar=true        B:alwaysAtNight=false   I:maxNames=3
-    B:chat=true           B:actionbar=true        I:actionbarIntervalSeconds=5
+    B:chat=true           B:announceNight=false
+    B:actionbar=true        I:actionbarIntervalSeconds=5
     B:tabList=true        S:tabPrefix=§7[Zz]§r
     B:particles=true      B:sounds=true           B:asciiOnly=false
 }

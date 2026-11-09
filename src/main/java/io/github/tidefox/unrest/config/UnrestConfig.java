@@ -99,6 +99,7 @@ public final class UnrestConfig {
     public static boolean bossbarAlwaysAtNight = false;
     public static int bossbarMaxNames = 3;
     public static boolean chat = true;
+    public static boolean announceNight = false;
     public static boolean actionbar = true;
     public static int actionbarIntervalSeconds = 5;
     public static boolean tabList = true;

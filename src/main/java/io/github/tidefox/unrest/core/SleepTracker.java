@@ -414,7 +414,7 @@ public final class SleepTracker {
         }
         data.setNight(type, day);
         data.setMeter(0);
-        if (active && UnrestConfig.chat) {
+        if (active && UnrestConfig.chat && UnrestConfig.announceNight) {
             ChatDisplay.announceNight(world, type);
         }
     }
