@@ -94,6 +94,11 @@ public final class UnrestConfig {
     public static int afkTimeoutSeconds = 300;
     public static int activeBeforeBedSeconds = 180;
 
+    // antiDodge
+    public static boolean countLeavers = true;
+    public static boolean countDimensionLeavers = true;
+    public static int leaverGraceSeconds = 300;
+
     // indicators
     public static boolean bossbar = true;
     public static boolean bossbarAlwaysAtNight = false;

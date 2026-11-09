@@ -138,8 +138,11 @@ public final class UnrestCommand extends CommandBase {
         }
         reply(sender, "Meter: " + Math.round(meter * 100) + "%");
         reply(sender, String.format("Unrest: %.2f / %.1f", debt, UnrestConfig.debtMax));
-        reply(sender, "Asleep: " + c.sleepers.size() + " / " + c.counted.size()
+        reply(sender, "Asleep: " + c.sleepers.size() + " / " + c.n()
                 + " (preset " + tracker.presetName(world) + ", mode " + UnrestConfig.mode.id() + ")");
+        if (!c.leavers.isEmpty()) {
+            reply(sender, "Left but still counted as awake: " + String.join(", ", c.leavers));
+        }
     }
 
     @Override

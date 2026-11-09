@@ -214,6 +214,14 @@ away to skip the night on their behalf.
 If nobody counts (for example everyone online is AFK or in creative), the
 meter pauses.
 
+**Leaving doesn't help.** If an awake player logs out or goes to the Nether
+or the End at night, they keep counting as **awake** until they would have
+gone AFK: 5 minutes after the last thing they did. So logging out to let the
+others skip faster gets you nothing you wouldn't get by standing still. While
+someone who left still counts, vanilla's instant "everyone is asleep" skip is
+blocked too. Coming back ends it straight away. Hover over a *lies down*
+message, or run `/unrest info`, to see who left and how long they still count.
+
 ---
 
 ## 9. What players see
@@ -345,6 +353,14 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `timeoutSeconds` | `300` | Seconds without activity before a player is AFK |
 | `activeBeforeBedSeconds` | `180` | A sleeper must have been active this many seconds before getting into bed |
 
+### antiDodge
+
+| Key | Default | Meaning |
+|---|---|---|
+| `countLeavers` | `true` | An awake player who logs out keeps counting as awake |
+| `countDimensionLeavers` | `true` | The same for an awake player who leaves the Overworld |
+| `graceSeconds` | `300` | How long, from their last activity. Keep it equal to `afk.timeoutSeconds` so leaving is never better than idling |
+
 ### indicators
 
 | Key | Default | Meaning |
@@ -405,7 +421,7 @@ The log is `logs/unrest-nights.csv`, one row per night:
 | `outcome` | `whole_server`, `partial`, `natural`, `vanilla_skip` (observe mode) or `external` (time changed by a command or another mod) |
 | `secondsToSkip` | Seconds from dusk to the skip (empty if there was none) |
 | `playersOnline` | Everyone online |
-| `countedN` | Counted players (§8) |
+| `countedN` | Counted players (§8), including leavers who still count |
 | `sleepersAtSkip`, `ratioAtSkip` | Sleepers and their share at the end |
 | `afkCount` | AFK players in the Overworld |
 | `peakSleepers` | Most sleepers at once that night |

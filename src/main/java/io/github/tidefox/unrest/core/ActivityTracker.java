@@ -80,6 +80,12 @@ public final class ActivityTracker {
         return t == null ? 0 : Math.max(0, now() - t);
     }
 
+    /** When the player was last active, in epoch millis. */
+    public long lastActiveMillis(EntityPlayerMP player) {
+        Long t = lastActive.get(player.getUniqueID());
+        return t == null ? now() : t;
+    }
+
     /** Whether the player was active shortly before getting into their current bed. */
     public boolean wasActiveBeforeBed(EntityPlayerMP player) {
         Boolean b = activeBeforeBed.get(player.getUniqueID());

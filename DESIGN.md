@@ -117,6 +117,12 @@ because other mods can change that rule. Quark's *Improved Sleeping*, for
 example, leaves AFK players out. The outcome is then worked out from the mod's
 own S and N: whole-server if `S ≥ N`, otherwise partial.
 
+**Exception: leavers (§6.1).** While a player who left still counts as awake,
+vanilla's "everyone is asleep" would be a dodge, so the mod stops it: just
+before each Overworld tick it clears `WorldServer.allPlayersSleeping` (SRG
+`field_73068_P`, by reflection). If that field can't be found, a warning is
+logged and the vanilla skip goes through, but it counts as a partial skip.
+
 ---
 
 ## 3. Night types and Unrest
@@ -237,6 +243,30 @@ turned off with `hungerCost.enabled`.
 - Players **outside the Overworld**, in **creative** or in **spectator** mode are not counted.
 - If `N == 0`, the meter is paused.
 
+### 6.1 Leavers (anti-dodge)
+
+Without this rule, awake players could speed up the night by **logging out**
+or **stepping into the Nether**: N drops, the ratio rises, and if everyone left
+is in bed it even becomes a whole-server sleep that *lowers* Unrest.
+
+So an awake, counted player who logs out (`antiDodge.countLeavers`) or leaves
+the Overworld (`antiDodge.countDimensionLeavers`) keeps counting as **awake**
+in N until `antiDodge.graceSeconds` (300) after their **last activity**. That
+is the moment they would have gone AFK had they stayed, so leaving is never
+better than standing still. A player who was already idle for 4 minutes counts
+for 1 more minute; someone who leaves right after doing something counts for
+the full 5.
+
+- Coming back to the Overworld ends it at once; the census counts them
+  normally again (awake, asleep or AFK).
+- Going to bed, going AFK or switching to creative isn't leaving.
+- Leavers are tracked all the time, so leaving just before dusk doesn't escape it.
+- While any leaver counts, vanilla's own skip is blocked (§2.4).
+- Leavers count only in `active` mode. They're kept in memory, so a server
+  restart forgets them.
+- They are listed in the `lies down` hover, in `/unrest info` and on the paper
+  in the `/unrest` menu, with the time left.
+
 Activity is tracked with Forge events (`PlayerInteractEvent.*`,
 `AttackEntityEvent`, `ServerChatEvent`, `CommandEvent`,
 `PlayerContainerEvent.Open`, `BlockEvent.BreakEvent`). Looking around is
@@ -344,6 +374,9 @@ hungerCost {
 afk {
     I:timeoutSeconds=300
     I:activeBeforeBedSeconds=180
+}
+antiDodge {
+    B:countLeavers=true   B:countDimensionLeavers=true   I:graceSeconds=300
 }
 indicators {
     B:bossbar=true        B:alwaysAtNight=false   I:maxNames=3

@@ -9,14 +9,17 @@ import io.github.tidefox.unrest.display.ChatDisplay;
 import io.github.tidefox.unrest.display.ParticleDisplay;
 import io.github.tidefox.unrest.display.TabListDisplay;
 import io.github.tidefox.unrest.log.NightLog;
+import io.github.tidefox.unrest.Unrest;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.WorldServer;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+import net.minecraftforge.fml.relauncher.ReflectionHelper;
 import net.minecraftforge.fml.relauncher.Side;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -79,11 +82,19 @@ public final class SleepTracker {
         public final List<EntityPlayerMP> sleepers = new ArrayList<>();
         public final List<EntityPlayerMP> inBed = new ArrayList<>();
         public final Map<UUID, Status> status = new HashMap<>();
+        /** Awake players who left the server or the Overworld and still count (§6.1). */
+        public final List<String> leavers = new ArrayList<>();
         public int playersOnline;
         public int afk;
 
+        /** N: counted players, plus leavers who still count as awake. */
+        public int n() {
+            return counted.size() + leavers.size();
+        }
+
         public double ratio() {
-            return counted.isEmpty() ? 0.0 : (double) sleepers.size() / counted.size();
+            int n = n();
+            return n == 0 ? 0.0 : (double) sleepers.size() / n;
         }
     }
 
@@ -91,6 +102,9 @@ public final class SleepTracker {
     private final ActivityTracker activity;
     private final NightLog log;
     private final DreamRoller dreams = new DreamRoller();
+    private final Leavers leavers = new Leavers();
+    private Field allPlayersSleeping;
+    private boolean vanillaBlockFailed;
     private final BossbarDisplay bossbar = new BossbarDisplay();
     private final Random rand = new Random();
 
@@ -174,7 +188,7 @@ public final class SleepTracker {
         }
         long tod = world.getWorldTime() % 24000L;
         double natural = night.storm ? Double.POSITIVE_INFINITY : (24000L - tod) / 20.0;
-        int n = census.counted.size();
+        int n = census.n();
         int s = census.sleepers.size();
         if (n == 0) {
             return natural;
@@ -218,6 +232,7 @@ public final class SleepTracker {
             if (timeAtTickEnd >= 0 && timeAtTickStart != timeAtTickEnd && UnrestConfig.enabled) {
                 onExternalTimeChange(world, timeAtTickStart);
             }
+            blockVanillaSkipIfDodged(world);
             asleepAtTickStart = fullyAsleep(world);
             return;
         }
@@ -251,6 +266,29 @@ public final class SleepTracker {
             secondTick(world);
         }
         timeAtTickEnd = world.getWorldTime();
+    }
+
+    /**
+     * While a leaver still counts as awake, the night isn't a whole-server sleep,
+     * but vanilla only sees who is left in the world and would skip at once. Its
+     * "everyone is asleep" flag is cleared just before the world ticks, which is
+     * the only place vanilla reads it. If the field can't be found, the vanilla
+     * skip still happens but is counted as a partial skip (§2.4).
+     */
+    private void blockVanillaSkipIfDodged(WorldServer world) {
+        if (vanillaBlockFailed || census.leavers.isEmpty() || night == null
+                || !UnrestConfig.enabled || UnrestConfig.mode != Mode.ACTIVE) {
+            return;
+        }
+        try {
+            if (allPlayersSleeping == null) {
+                allPlayersSleeping = ReflectionHelper.findField(WorldServer.class, "allPlayersSleeping", "field_73068_P");
+            }
+            allPlayersSleeping.setBoolean(world, false);
+        } catch (Exception | LinkageError ex) {
+            vanillaBlockFailed = true;
+            Unrest.LOG.warn("Unrest can't stop vanilla's skip while leavers count as awake; such skips count as partial.", ex);
+        }
     }
 
     /**
@@ -343,12 +381,16 @@ public final class SleepTracker {
         Census c = new Census();
         List<EntityPlayerMP> players = server.getPlayerList().getPlayers();
         c.playersOnline = players.size();
+        Set<UUID> online = new HashSet<>();
+        Set<UUID> inOverworld = new HashSet<>();
         for (EntityPlayerMP p : players) {
             activity.update(p);
+            online.add(p.getUniqueID());
             if (p.dimension != 0) {
                 c.status.put(p.getUniqueID(), Status.ELSEWHERE);
                 continue;
             }
+            inOverworld.add(p.getUniqueID());
             boolean inBed = p.isPlayerSleeping();
             if (inBed) {
                 c.inBed.add(p);
@@ -368,6 +410,20 @@ public final class SleepTracker {
                 c.status.put(p.getUniqueID(), Status.SLEEPING);
             } else {
                 c.status.put(p.getUniqueID(), inBed ? Status.IN_BED : Status.AWAKE);
+            }
+        }
+        Map<UUID, Leavers.Awake> awake = new HashMap<>();
+        for (EntityPlayerMP p : c.counted) {
+            if (!c.sleepers.contains(p)) {
+                awake.put(p.getUniqueID(), new Leavers.Awake(p.getName(), activity.lastActiveMillis(p)));
+            }
+        }
+        long now = System.currentTimeMillis();
+        leavers.update(now, awake, online, inOverworld);
+        // Leavers only change the count in active mode; observe mode logs vanilla as it is.
+        if (UnrestConfig.mode == Mode.ACTIVE) {
+            for (Leavers.Leaver l : leavers.list()) {
+                c.leavers.add(l.name + " (" + SleepMath.formatDuration(l.secondsLeft(now)) + ")");
             }
         }
         return c;
@@ -471,7 +527,7 @@ public final class SleepTracker {
         }
         Set<UUID> changed = new HashSet<>();
         int s = census.sleepers.size();
-        int n = census.counted.size();
+        int n = census.n();
         for (EntityPlayerMP p : census.sleepers) {
             UUID id = p.getUniqueID();
             if (now.contains(id) && !shownSleepers.contains(id)) {
@@ -516,7 +572,7 @@ public final class SleepTracker {
     }
 
     private void runMeter(WorldServer world, UnrestWorldData data) {
-        int n = census.counted.size();
+        int n = census.n();
         int s = census.sleepers.size();
         if (n == 0) {
             // Nobody counts: the meter is paused.
@@ -634,7 +690,7 @@ public final class SleepTracker {
 
     private void skip(WorldServer world, UnrestWorldData data, Outcome outcome) {
         List<EntityPlayerMP> sleepers = new ArrayList<>(census.sleepers);
-        int n = census.counted.size();
+        int n = census.n();
         long ticks = SkipHandler.jumpToMorning(world);
         finish(world, data, outcome, ticks, sleepers, n);
     }
@@ -657,7 +713,7 @@ public final class SleepTracker {
             NightType type = data.getNightType(day);
             night = new Night(type == null ? NightType.NORMAL : type, day, type == null, data.getDebt());
         }
-        int n = Math.max(census.counted.size(), sleepers.size());
+        int n = Math.max(census.n(), sleepers.size());
         Outcome outcome = UnrestConfig.mode == Mode.OBSERVE ? Outcome.VANILLA_SKIP
                 : sleepers.size() >= n ? Outcome.WHOLE_SERVER : Outcome.PARTIAL;
         finish(world, data, outcome, ticks, sleepers, n);
@@ -713,7 +769,7 @@ public final class SleepTracker {
         e.debtAfter = debtAfter;
         e.outcome = outcome.id;
         e.playersOnline = census.playersOnline;
-        e.countedN = census.counted.size();
+        e.countedN = census.n();
         e.afkCount = census.afk;
         e.peakSleepers = n.peakSleepers;
         e.nightmares = n.nightmares;

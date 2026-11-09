@@ -20,6 +20,7 @@ public final class ConfigLoader {
     private static final String DREAMS = "dreams";
     private static final String HUNGER = "hungerCost";
     private static final String AFK = "afk";
+    private static final String ANTI_DODGE = "antiDodge";
     private static final String INDICATORS = "indicators";
     private static final String COMMANDS = "commands";
     private static final String LOGGING = "logging";
@@ -120,6 +121,15 @@ public final class ConfigLoader {
         UnrestConfig.afkTimeoutSeconds = cfg.getInt("timeoutSeconds", AFK, 300, 1, 86400, "Seconds without activity before a player is AFK");
         UnrestConfig.activeBeforeBedSeconds = cfg.getInt("activeBeforeBedSeconds", AFK, 180, 0, 86400,
                 "A sleeper must have been active this many seconds before getting into bed");
+
+        UnrestConfig.countLeavers = cfg.getBoolean("countLeavers", ANTI_DODGE, true,
+                "An awake player who logs out at night keeps counting as awake for graceSeconds after their last"
+                        + " activity, so leaving the server doesn't speed up the skip");
+        UnrestConfig.countDimensionLeavers = cfg.getBoolean("countDimensionLeavers", ANTI_DODGE, true,
+                "The same for an awake player who leaves the Overworld (e.g. steps into the Nether)");
+        UnrestConfig.leaverGraceSeconds = cfg.getInt("graceSeconds", ANTI_DODGE, 300, 0, 86400,
+                "How long a leaver keeps counting, from their last activity. Matches afk.timeoutSeconds by default,"
+                        + " so leaving is never better than standing still");
 
         UnrestConfig.bossbar = cfg.getBoolean("bossbar", INDICATORS, true, "");
         UnrestConfig.bossbarAlwaysAtNight = cfg.getBoolean("alwaysAtNight", INDICATORS, false, "Show the bossbar all night");

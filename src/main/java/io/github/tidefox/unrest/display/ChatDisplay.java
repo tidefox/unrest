@@ -118,6 +118,9 @@ public final class ChatDisplay {
         }
         String text = "Asleep: " + (asleep.isEmpty() ? "nobody" : String.join(", ", asleep))
                 + "\nAwake: " + (awake.isEmpty() ? "nobody" : String.join(", ", awake));
+        if (!census.leavers.isEmpty()) {
+            text += "\nLeft, still counted as awake: " + String.join(", ", census.leavers);
+        }
         return new TextComponentString(text);
     }
 
