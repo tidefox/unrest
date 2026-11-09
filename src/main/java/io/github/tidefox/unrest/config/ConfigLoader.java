@@ -104,6 +104,12 @@ public final class ConfigLoader {
         UnrestConfig.nightmareBase = d(DREAMS, "nightmareBase", 0.03, 0.0, 1.0, "");
         UnrestConfig.nightmarePerDebt = d(DREAMS, "nightmarePerDebt", 0.3, -10.0, 10.0, "");
         UnrestConfig.nightmareMeterLoss = d(DREAMS, "nightmareMeterLoss", 0.05, 0.0, 1.0, "Meter lost on a Nightmare");
+        UnrestConfig.dreamAnnounce = UnrestConfig.DreamAnnounce.fromId(cfg.getString("announce", DREAMS, "changes",
+                "Dream rolls in chat. off: never. changes: when a sleeper's dream changes (a first roll counts as a"
+                        + " change from Normal). all: every roll. Nightmares are always announced while chat is on.",
+                new String[] {"off", "changes", "all"}));
+        UnrestConfig.nightmareSound = cfg.getBoolean("nightmareSound", DREAMS, true,
+                "Play a sound to a player woken by a Nightmare (also needs indicators.sounds)");
 
         UnrestConfig.hungerEnabled = cfg.getBoolean("enabled", HUNGER, true, "Sleepers lose food when the night is skipped");
         UnrestConfig.hoursPerPoint = d(HUNGER, "hoursPerPoint", 2.0, 0.1, 100.0, "Skipped hours per food point");

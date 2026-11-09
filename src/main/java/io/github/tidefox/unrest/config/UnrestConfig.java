@@ -15,6 +15,24 @@ public final class UnrestConfig {
         }
     }
 
+    /** Which dream rolls are announced in chat (DESIGN.md §4.1). */
+    public enum DreamAnnounce {
+        OFF, CHANGES, ALL;
+
+        public String id() {
+            return name().toLowerCase(java.util.Locale.ROOT);
+        }
+
+        public static DreamAnnounce fromId(String id) {
+            for (DreamAnnounce a : values()) {
+                if (a.id().equalsIgnoreCase(id)) {
+                    return a;
+                }
+            }
+            return CHANGES;
+        }
+    }
+
     private UnrestConfig() {}
 
     // general
@@ -62,6 +80,8 @@ public final class UnrestConfig {
     public static double nightmareBase = 0.03;
     public static double nightmarePerDebt = 0.3;
     public static double nightmareMeterLoss = 0.05;
+    public static DreamAnnounce dreamAnnounce = DreamAnnounce.CHANGES;
+    public static boolean nightmareSound = true;
 
     // hungerCost
     public static boolean hungerEnabled = true;
@@ -107,6 +127,11 @@ public final class UnrestConfig {
     /** The moon symbol, or its ASCII replacement. */
     public static String moon() {
         return asciiOnly ? "(night)" : "🌙";
+    }
+
+    /** The dream symbol, or its ASCII replacement. */
+    public static String dreamSymbol() {
+        return asciiOnly ? "(dream)" : "💭";
     }
 
     /** The sun symbol, or its ASCII replacement. */

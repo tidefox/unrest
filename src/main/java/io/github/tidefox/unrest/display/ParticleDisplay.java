@@ -10,7 +10,7 @@ import net.minecraft.world.WorldServer;
 
 import java.util.List;
 
-/** Cloud puffs above sleepers and the meter chimes (DESIGN.md §7). */
+/** Cloud puffs above sleepers, the meter chimes and the nightmare sound (DESIGN.md §7). */
 public final class ParticleDisplay {
 
     private ParticleDisplay() {}
@@ -19,6 +19,12 @@ public final class ParticleDisplay {
         for (EntityPlayerMP p : sleepers) {
             world.spawnParticle(EnumParticleTypes.CLOUD, p.posX, p.posY + 0.7, p.posZ, 2, 0.15, 0.05, 0.15, 0.005);
         }
+    }
+
+    /** A quiet, unsettling sound for the one player woken by a Nightmare. */
+    public static void nightmare(EntityPlayerMP p) {
+        p.connection.sendPacket(new SPacketSoundEffect(SoundEvents.ENTITY_ZOMBIE_VILLAGER_CONVERTED,
+                SoundCategory.PLAYERS, p.posX, p.posY, p.posZ, 0.5f, 0.6f));
     }
 
     public static void chime(WorldServer world, float pitch) {

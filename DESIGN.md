@@ -178,6 +178,33 @@ Check the rolls in this order: Nightmare, then Restless, then Deep, then Normal.
 A sleeper woken by a Nightmare can get back into bed straight away. They count
 again once the vanilla sleep timer finishes, since they were active just before.
 
+A Nightmare also plays a quiet zombie-villager-cure sound to the woken player
+only (`dreams.nightmareSound`, and `indicators.sounds` must be on).
+
+### 4.1 Dream announcements
+
+Each roll can post one chat line to everyone in the Overworld, grouping all the
+sleepers worth mentioning:
+
+```
+💭 Steve sinks into a deep sleep. Alex tosses and turns.
+```
+
+`dreams.announce` decides which rolls are mentioned:
+
+| Value | Mentioned |
+|---|---|
+| `off` | Nothing (Nightmares keep their own message) |
+| `changes` (default) | A sleeper whose dream differs from their previous roll. A first roll counts as a change from Normal, so a first Normal roll is silent. |
+| `all` | Every roll |
+
+The phrase depends on the previous dream: *sinks into a deep sleep* / *stays
+deeply asleep*, *tosses and turns* / *keeps tossing and turning*, *settles
+down* (Restless → Normal), *stirs a little* (Deep → Normal) and *sleeps
+soundly*. Colours: Deep aqua, Restless yellow, Normal gray. Hovering over a
+name shows the dream and its effect; hovering over 💭 shows the current odds
+of each roll. With `indicators.chat = false` nothing is posted.
+
 ---
 
 ## 5. Cost of a skip (vanilla hunger)
@@ -224,14 +251,14 @@ last-activity time is kept in memory only.
 |---|---|---|
 | **Bossbar** (`BossInfoServer`, `NOTCHED_10`) | Counted players in the Overworld while at least one player is in bed (`bossbar.alwaysAtNight` makes it show for the whole night) | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. The bar shows the meter. Colour by night type: Calm green, Normal blue, Restless yellow, Haunted red. Up to `bossbar.maxNames` (3) names, then `+N`. |
 | **Chat: into or out of bed** | Everyone in the Overworld | `Steve lies down (3/7) — dawn in ~1:20`. Hovering over it lists who is asleep and who is awake. |
-| **Chat: events** | Everyone in the Overworld | The night roll, Nightmare wake-ups, and the skip summary. |
+| **Chat: events** | Everyone in the Overworld | The night roll, dream rolls (§4.1), Nightmare wake-ups, and the skip summary. Hovering over the skip summary shows the night's Deep, Restless and Nightmare counts. |
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
 | **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
 | **Sound** | Overworld players | A soft chime when the meter passes 50 % and 90 %. |
 
-If the client font can't show 🌙 and ☀, `indicators.asciiOnly = true` replaces
-them with `(night)` and `(dawn)`.
+If the client font can't show 🌙, ☀ and 💭, `indicators.asciiOnly = true` replaces
+them with `(night)`, `(dawn)` and `(dream)`.
 
 ### 7.1 `/unrest` head menu
 
@@ -242,7 +269,7 @@ Running `/unrest` with no arguments opens a read-only 6-row chest screen:
   - Experience bottle: the meter %
   - Coloured dye: Unrest shown as `●●○○○` plus the exact value
   - Paper: `S / N` and the preset
-- **Rows 2–6:** one `minecraft:skull` (meta 3, `SkullOwner` set to the player's profile) for each online player. Sleepers come first, then awake players, then AFK players, then players in other dimensions. Each head's name is the player's name. Its lore is `💤 Sleeping 1:20`, `Awake`, `AFK (6m)` or `Elsewhere`.
+- **Rows 2–6:** one `minecraft:skull` (meta 3, `SkullOwner` set to the player's profile) for each online player. Sleepers come first, then awake players, then AFK players, then players in other dimensions. Each head's name is the player's name. Its lore is `💤 Sleeping 1:20 · Deep sleep` (the dream is added once the sleeper has rolled), `Awake`, `AFK (6m)` or `Elsewhere`.
 - Every click is cancelled. A custom `Container` returns `ItemStack.EMPTY` from `slotClick` and refuses `transferStackInSlot`.
 
 The skins are drawn by the client from the profile. On an offline-mode server
@@ -305,6 +332,7 @@ dreams {
     D:restlessBase=0.30  D:restlessPerRatio=-0.20 D:restlessPerDebt=0.03
     D:nightmareBase=0.03 D:nightmarePerDebt=0.3
     D:nightmareMeterLoss=0.05
+    S:announce=changes   B:nightmareSound=true
 }
 hungerCost {
     B:enabled=true

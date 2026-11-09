@@ -1,6 +1,9 @@
 package io.github.tidefox.unrest.display;
 
 import io.github.tidefox.unrest.config.UnrestConfig;
+import io.github.tidefox.unrest.core.Dream;
+import io.github.tidefox.unrest.core.DreamReport;
+import io.github.tidefox.unrest.core.DreamRoller;
 import io.github.tidefox.unrest.core.NightType;
 import io.github.tidefox.unrest.core.SleepMath;
 import io.github.tidefox.unrest.core.SleepTracker;
@@ -50,10 +53,61 @@ public final class ChatDisplay {
         toOverworld(world, colored(p.getName() + " wakes up in a cold sweat.", TextFormatting.DARK_PURPLE));
     }
 
-    public static void skipSummary(WorldServer world, int s, int n, NightType type, int seconds) {
+    /**
+     * One line for a dream roll, e.g. {@code 💭 Steve sinks into a deep sleep. Alex tosses and turns.}
+     * Each name hovers with what the dream does; the symbol hovers with the odds of the roll.
+     * Sends nothing if no roll is worth announcing under {@code dreams.announce}.
+     */
+    public static void dreams(WorldServer world, List<DreamRoller.Roll> rolls, double r, double debt) {
+        ITextComponent line = null;
+        for (DreamRoller.Roll roll : rolls) {
+            if (!DreamReport.announce(roll.before, roll.after, UnrestConfig.dreamAnnounce)) {
+                continue;
+            }
+            if (line == null) {
+                line = colored(UnrestConfig.dreamSymbol(), TextFormatting.DARK_AQUA);
+                line.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, odds(r, debt)));
+            }
+            ITextComponent part = colored(" " + DreamReport.phrase(roll.player.getName(), roll.before, roll.after) + ".",
+                    dreamColor(roll.after));
+            part.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT,
+                    new TextComponentString(roll.after.label() + "\n" + roll.after.effect())));
+            line.appendSibling(part);
+        }
+        if (line != null) {
+            toOverworld(world, line);
+        }
+    }
+
+    static ITextComponent odds(double r, double debt) {
+        int[] o = DreamReport.oddsPercent(r, debt);
+        return new TextComponentString("Odds each roll right now:\nDeep " + o[2] + "%\nSound " + o[3]
+                + "%\nRestless " + o[1] + "%\nNightmare " + o[0] + "%");
+    }
+
+    public static TextFormatting dreamColor(Dream d) {
+        switch (d) {
+            case DEEP:
+                return TextFormatting.AQUA;
+            case RESTLESS:
+                return TextFormatting.YELLOW;
+            case NIGHTMARE:
+                return TextFormatting.DARK_PURPLE;
+            default:
+                return TextFormatting.GRAY;
+        }
+    }
+
+    public static void skipSummary(WorldServer world, int s, int n, NightType type, int seconds,
+                                   int deep, int restless, int nightmares) {
         String text = UnrestConfig.sun() + " The night passes. (" + s + "/" + n + " asleep, "
                 + type.displayName() + ", " + SleepMath.formatDuration(seconds) + ")";
-        toOverworld(world, colored(text, TextFormatting.GOLD));
+        ITextComponent msg = colored(text, TextFormatting.GOLD);
+        if (UnrestConfig.dreamsEnabled) {
+            msg.getStyle().setHoverEvent(new HoverEvent(HoverEvent.Action.SHOW_TEXT, new TextComponentString(
+                    "Dreams tonight:\nDeep " + deep + "\nRestless " + restless + "\nNightmares " + nightmares)));
+        }
+        toOverworld(world, msg);
     }
 
     static ITextComponent whoIsAsleep(SleepTracker.Census census) {

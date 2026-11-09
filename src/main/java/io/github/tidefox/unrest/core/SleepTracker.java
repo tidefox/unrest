@@ -62,6 +62,8 @@ public final class SleepTracker {
         public int seconds;
         public int peakSleepers;
         public int nightmares;
+        public int deepDreams;
+        public int restlessDreams;
 
         Night(NightType type, long day, boolean storm, double debtBefore) {
             this.type = type;
@@ -129,6 +131,11 @@ public final class SleepTracker {
 
     public Night night() {
         return night;
+    }
+
+    /** The sleeper's current dream, or null if they haven't rolled yet tonight. */
+    public Dream dreamOf(UUID id) {
+        return dreams.hasRolled(id) ? dreams.dreamOf(id) : null;
     }
 
     public boolean isShownAsSleeper(UUID id) {
@@ -536,8 +543,18 @@ public final class SleepTracker {
         } else if (UnrestConfig.dreamsEnabled) {
             if (secondsUntilRoll <= 0) {
                 secondsUntilRoll = Math.max(1, UnrestConfig.rollIntervalSeconds);
-                for (EntityPlayerMP p : dreams.roll(census.sleepers, r, data.getDebt(), rand)) {
-                    nightmare(world, data, p);
+                List<DreamRoller.Roll> rolls = dreams.roll(census.sleepers, r, data.getDebt(), rand);
+                if (UnrestConfig.chat) {
+                    ChatDisplay.dreams(world, rolls, r, data.getDebt());
+                }
+                for (DreamRoller.Roll roll : rolls) {
+                    if (roll.after == Dream.DEEP) {
+                        night.deepDreams++;
+                    } else if (roll.after == Dream.RESTLESS) {
+                        night.restlessDreams++;
+                    } else if (roll.after == Dream.NIGHTMARE) {
+                        nightmare(world, data, roll.player);
+                    }
                 }
             }
             secondsUntilRoll--;
@@ -585,6 +602,9 @@ public final class SleepTracker {
         quietWake.add(p.getUniqueID());
         if (UnrestConfig.chat) {
             ChatDisplay.nightmare(world, p);
+        }
+        if (UnrestConfig.sounds && UnrestConfig.nightmareSound) {
+            ParticleDisplay.nightmare(p);
         }
     }
 
@@ -668,7 +688,8 @@ public final class SleepTracker {
         log.write(e);
 
         if (active && UnrestConfig.chat) {
-            ChatDisplay.skipSummary(world, s, n, done.type, done.seconds);
+            ChatDisplay.skipSummary(world, s, n, done.type, done.seconds,
+                    done.deepDreams, done.restlessDreams, done.nightmares);
         }
 
         if (!done.storm) {

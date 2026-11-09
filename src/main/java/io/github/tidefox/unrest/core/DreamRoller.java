@@ -13,23 +13,35 @@ import java.util.UUID;
 /** Per-sleeper dream rolls (DESIGN.md §4). */
 public final class DreamRoller {
 
+    /** One sleeper's roll: the dream they had before (null if none) and the new one. */
+    public static final class Roll {
+        public final EntityPlayerMP player;
+        public final Dream before;
+        public final Dream after;
+
+        Roll(EntityPlayerMP player, Dream before, Dream after) {
+            this.player = player;
+            this.before = before;
+            this.after = after;
+        }
+    }
+
     private final Map<UUID, Dream> dreams = new HashMap<>();
 
-    /** Rolls once for every sleeper and returns the ones who had a Nightmare. */
-    public List<EntityPlayerMP> roll(List<EntityPlayerMP> sleepers, double r, double debt, Random rand) {
+    /** Rolls once for every sleeper, in sleeper order. */
+    public List<Roll> roll(List<EntityPlayerMP> sleepers, double r, double debt, Random rand) {
+        Map<UUID, Dream> previous = new HashMap<>(dreams);
         dreams.clear();
-        List<EntityPlayerMP> woken = new ArrayList<>();
+        List<Roll> rolls = new ArrayList<>();
         if (!UnrestConfig.dreamsEnabled) {
-            return woken;
+            return rolls;
         }
         for (EntityPlayerMP p : sleepers) {
             Dream d = SleepMath.rollDream(r, debt, rand);
             dreams.put(p.getUniqueID(), d);
-            if (d == Dream.NIGHTMARE) {
-                woken.add(p);
-            }
+            rolls.add(new Roll(p, previous.get(p.getUniqueID()), d));
         }
-        return woken;
+        return rolls;
     }
 
     /** The current dream of a sleeper. Sleepers who haven't rolled yet sleep normally. */
@@ -39,6 +51,11 @@ public final class DreamRoller {
         }
         Dream d = dreams.get(id);
         return d == null ? Dream.NORMAL : d;
+    }
+
+    /** Whether the sleeper has rolled since getting into bed (or since the last reset). */
+    public boolean hasRolled(UUID id) {
+        return UnrestConfig.dreamsEnabled && dreams.containsKey(id);
     }
 
     /** Sum of the dream weights of the sleepers. */

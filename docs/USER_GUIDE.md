@@ -159,6 +159,19 @@ bed.
 
 Dreams don't apply to a whole-server sleep.
 
+Dreams are announced in chat, one line per roll:
+
+```
+💭 Steve sinks into a deep sleep. Alex tosses and turns.
+```
+
+By default a sleeper is only mentioned when their dream changes (so a run of
+ordinary sleep stays quiet). Hover over a name to see what the dream does, or
+over 💭 to see the odds of each dream right now. Set `dreams.announce` to `all`
+to hear every roll, or `off` to keep chat quiet. The `/unrest` menu also shows
+each sleeper's current dream, and hovering over the *night passes* message
+shows how many Deep, Restless and Nightmare dreams the night had.
+
 ---
 
 ## 7. The cost of sleeping
@@ -210,7 +223,7 @@ All of these use normal vanilla features, so they work on unmodded clients.
 | Where | What |
 |---|---|
 | **Bossbar** | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. Shown while anyone is in bed. Green on Calm, blue on Normal, yellow on Restless, red on Haunted. |
-| **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also the night roll, Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
+| **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also the night roll, dreams (`💭 Steve sinks into a deep sleep.`), Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
 | **Actionbar** | Awake players see `3 players are waiting for you to sleep` every 5 seconds. Nobody is named. |
 | **Tab list** | `[Zz]` before the names of sleepers. |
 | **Particles** | A small cloud above each sleeper. |
@@ -225,10 +238,10 @@ are asleep, the preset and the mode).
 
 Below: one head per online player. Sleepers come first, then awake players,
 then AFK players, then players in other dimensions. Each head says
-`💤 Sleeping 1:20`, `In bed`, `Awake`, `AFK (6m)` or `Elsewhere`. You can't
+`💤 Sleeping 1:20 · Deep sleep` (the dream appears after the first roll), `In bed`, `Awake`, `AFK (6m)` or `Elsewhere`. You can't
 take anything out of the menu.
 
-If the client's font can't show 🌙, ☀ or 💤, set `indicators.asciiOnly=true`.
+If the client's font can't show 🌙, ☀, 💤 or 💭, set `indicators.asciiOnly=true`.
 
 ---
 
@@ -312,6 +325,8 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `restlessBase`, `restlessPerRatio`, `restlessPerDebt` | 0.30, −0.20, 0.03 | Restless chance, same shape |
 | `nightmareBase`, `nightmarePerDebt` | 0.03, 0.3 | Nightmare chance = base × (1 − r) × (1 + perDebt × Unrest) |
 | `nightmareMeterLoss` | `0.05` | Meter lost on a Nightmare |
+| `announce` | `changes` | Dream rolls in chat: `off`, `changes` (only when a sleeper's dream changes) or `all` |
+| `nightmareSound` | `true` | A quiet sound for the player a Nightmare wakes (needs `indicators.sounds`) |
 
 ### hungerCost
 
@@ -344,7 +359,7 @@ For each of `calm`, `normal`, `restless` and `haunted`:
 | `tabPrefix` | `§7[Zz]§r` | The tag text (`§` colour codes allowed) |
 | `particles` | `true` | Cloud puffs above sleepers |
 | `sounds` | `true` | Chimes at 50% and 90% |
-| `asciiOnly` | `false` | Replace 🌙 ☀ 💤 ● with plain text |
+| `asciiOnly` | `false` | Replace 🌙 ☀ 💤 💭 ● with plain text |
 
 ### commands and logging
 
