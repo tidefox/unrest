@@ -29,7 +29,8 @@ import java.util.UUID;
 /**
  * The Reaper (DESIGN.md §4.4): a Nightmare sends a wither skeleton with a hoe
  * (or the mob named by {@code reaper.entity}) after an awake player. Killing
- * it in time brings the dawn closer; if it fades unkilled, the dawn slips back. Only one hunts at a time.
+ * it in time brings the dawn closer; if it fades unkilled, the dawn slips
+ * back. Only one hunts at a time.
  */
 public final class Reaper {
 
