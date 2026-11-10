@@ -311,15 +311,30 @@ public final class SleepTracker {
      * "everyone is asleep" flag is cleared just before the world ticks, which is
      * the only place vanilla reads it. If the field can't be found, the vanilla
      * skip still happens but is counted as a partial skip (§2.4).
+     *
+     * <p>The census is up to a second old, and vanilla raises the flag the
+     * moment the last awake player logs out or leaves the Overworld, then skips
+     * on the very next tick. That player isn't a leaver in the old census yet,
+     * so whenever the flag is up the census is taken again first. Otherwise the
+     * last awake player leaving would skip the night at once, past the meter.
      */
     private void blockVanillaSkipIfDodged(WorldServer world) {
-        if (vanillaBlockFailed || census.leavers.isEmpty() || night == null
+        if (vanillaBlockFailed || night == null
                 || !UnrestConfig.enabled || UnrestConfig.mode != Mode.ACTIVE) {
             return;
         }
         try {
             if (allPlayersSleeping == null) {
                 allPlayersSleeping = ReflectionHelper.findField(WorldServer.class, "allPlayersSleeping", "field_73068_P");
+            }
+            if (!allPlayersSleeping.getBoolean(world)) {
+                return;
+            }
+            if (census.leavers.isEmpty()) {
+                census = takeCensus();
+            }
+            if (census.leavers.isEmpty()) {
+                return;
             }
             allPlayersSleeping.setBoolean(world, false);
         } catch (Exception | LinkageError ex) {

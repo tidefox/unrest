@@ -140,6 +140,10 @@ vanilla's "everyone is asleep" would be a dodge, so the mod stops it: just
 before each Overworld tick it clears `WorldServer.allPlayersSleeping` (SRG
 `field_73068_P`, by reflection). If that field can't be found, a warning is
 logged and the vanilla skip goes through, but it counts as a partial skip.
+Vanilla raises that flag the moment the last awake player logs out or leaves
+the Overworld and skips on the very next tick, before the once-a-second census
+could see the leaver. So whenever the flag is up, the mod takes the census
+again on the spot before deciding whether to clear it.
 
 ---
 
