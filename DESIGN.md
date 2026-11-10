@@ -140,6 +140,10 @@ vanilla's "everyone is asleep" would be a dodge, so the mod stops it: just
 before each Overworld tick it clears `WorldServer.allPlayersSleeping` (SRG
 `field_73068_P`, by reflection). If that field can't be found, a warning is
 logged and the vanilla skip goes through, but it counts as a partial skip.
+Vanilla raises that flag the moment the last awake player logs out or leaves
+the Overworld and skips on the very next tick, before the once-a-second census
+could see the leaver. So whenever the flag is up, the mod takes the census
+again on the spot before deciding whether to clear it.
 
 ---
 
@@ -371,6 +375,10 @@ lightning:
 
 A wither skeleton's hits inflict Wither, so on a hardcore world the Reaper
 is a real threat. `reaper.enabled = false` turns it off.
+`reaper.entity` swaps in another mob by registry name (e.g.
+`lycanitesmobs:reaper`); it keeps the name, tag, glow, speed and hunt, but
+not the hoe and skull. An unknown name falls back to the wither skeleton.
+`reaper.health = 0` keeps the mob's own health.
 
 ---
 
@@ -576,6 +584,7 @@ moon {
 reaper {
     B:enabled=true        I:seconds=60            D:reward=0.20
     D:penalty=0.05        D:health=30.0
+    S:entity=minecraft:wither_skeleton
 }
 commands {
     B:registerSleepAlias=true

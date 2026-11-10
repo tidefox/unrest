@@ -1,9 +1,12 @@
 package io.github.tidefox.unrest.core;
 
+import io.github.tidefox.unrest.Unrest;
 import io.github.tidefox.unrest.config.UnrestConfig;
 import io.github.tidefox.unrest.display.ParticleDisplay;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityList;
+import net.minecraft.entity.EntityLiving;
 import net.minecraft.entity.SharedMonsterAttributes;
 import net.minecraft.entity.monster.EntityWitherSkeleton;
 import net.minecraft.entity.player.EntityPlayerMP;
@@ -13,6 +16,7 @@ import net.minecraft.inventory.EntityEquipmentSlot;
 import net.minecraft.item.ItemStack;
 import net.minecraft.potion.PotionEffect;
 import net.minecraft.util.EnumFacing;
+import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.world.EnumDifficulty;
@@ -24,15 +28,16 @@ import java.util.UUID;
 
 /**
  * The Reaper (DESIGN.md §4.4): a Nightmare sends a wither skeleton with a hoe
- * after an awake player. Killing it in time brings the dawn closer; if it
- * fades unkilled, the dawn slips back. Only one hunts at a time.
+ * (or the mob named by {@code reaper.entity}) after an awake player. Killing
+ * it in time brings the dawn closer; if it fades unkilled, the dawn slips
+ * back. Only one hunts at a time.
  */
 public final class Reaper {
 
     /** Scoreboard tag on the entity, so a leftover from a restart can be removed. */
     public static final String TAG = "unrest_reaper";
 
-    private EntityWitherSkeleton entity;
+    private EntityLiving entity;
     private UUID id;
     private EntityPlayerMP target;
     private int secondsLeft;
@@ -63,19 +68,23 @@ public final class Reaper {
             return null;
         }
         EntityPlayerMP p = awake.get(rand.nextInt(awake.size()));
-        EntityWitherSkeleton e = new EntityWitherSkeleton(world);
+        EntityLiving e = create(world);
         BlockPos pos = findSpot(world, p, e, rand);
         if (pos == null) {
             return null;
         }
         int ticks = UnrestConfig.reaperSeconds * 20;
         e.onInitialSpawn(world.getDifficultyForLocation(pos), null);
-        e.setItemStackToSlot(EntityEquipmentSlot.MAINHAND, new ItemStack(Items.IRON_HOE));
-        e.setItemStackToSlot(EntityEquipmentSlot.HEAD, new ItemStack(Items.SKULL, 1, 1));
-        e.setDropChance(EntityEquipmentSlot.MAINHAND, 0f);
-        e.setDropChance(EntityEquipmentSlot.HEAD, 0f);
-        e.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(UnrestConfig.reaperHealth);
-        e.setHealth((float) UnrestConfig.reaperHealth);
+        if (e instanceof EntityWitherSkeleton) {
+            e.setItemStackToSlot(EntityEquipmentSlot.MAINHAND, new ItemStack(Items.IRON_HOE));
+            e.setItemStackToSlot(EntityEquipmentSlot.HEAD, new ItemStack(Items.SKULL, 1, 1));
+            e.setDropChance(EntityEquipmentSlot.MAINHAND, 0f);
+            e.setDropChance(EntityEquipmentSlot.HEAD, 0f);
+        }
+        if (UnrestConfig.reaperHealth > 0) {
+            e.getEntityAttribute(SharedMonsterAttributes.MAX_HEALTH).setBaseValue(UnrestConfig.reaperHealth);
+            e.setHealth((float) UnrestConfig.reaperHealth);
+        }
         e.setCustomNameTag("§4☠ The Reaper");
         e.setAlwaysRenderNameTag(true);
         e.addPotionEffect(new PotionEffect(MobEffects.GLOWING, ticks, 0, false, false));
@@ -94,8 +103,32 @@ public final class Reaper {
         return p;
     }
 
-    /** Somewhere 8–14 blocks from the player with room for a wither skeleton, near their height. */
-    private static BlockPos findSpot(WorldServer world, EntityPlayerMP p, EntityWitherSkeleton e, Random rand) {
+    /** Warn only once per configured name, not every Nightmare. */
+    private static String warnedAbout;
+
+    /** The mob named by {@code reaper.entity}, or a wither skeleton if that isn't a living mob here. */
+    private static EntityLiving create(WorldServer world) {
+        String name = UnrestConfig.reaperEntity;
+        if (name != null && !name.isEmpty() && !"minecraft:wither_skeleton".equals(name)) {
+            Entity made = null;
+            try {
+                made = EntityList.createEntityByIDFromName(new ResourceLocation(name), world);
+            } catch (RuntimeException ex) {
+                // a malformed name or a mob that can't be built this way: fall back below
+            }
+            if (made instanceof EntityLiving) {
+                return (EntityLiving) made;
+            }
+            if (!name.equals(warnedAbout)) {
+                warnedAbout = name;
+                Unrest.LOG.warn("reaper.entity '{}' isn't an installed living mob; using a wither skeleton", name);
+            }
+        }
+        return new EntityWitherSkeleton(world);
+    }
+
+    /** Somewhere 8–14 blocks from the player with room for the Reaper, near their height. */
+    private static BlockPos findSpot(WorldServer world, EntityPlayerMP p, EntityLiving e, Random rand) {
         int py = MathHelper.floor(p.posY);
         for (int i = 0; i < 24; i++) {
             double a = rand.nextDouble() * Math.PI * 2;

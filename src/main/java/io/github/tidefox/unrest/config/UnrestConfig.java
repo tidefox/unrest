@@ -144,6 +144,8 @@ public final class UnrestConfig {
     public static double reaperReward = 0.20;
     public static double reaperPenalty = 0.05;
     public static double reaperHealth = 30.0;
+    /** Registry name of the mob sent as the Reaper, e.g. minecraft:wither_skeleton or lycanitesmobs:reaper. */
+    public static String reaperEntity = "minecraft:wither_skeleton";
 
     // nightWatch: awake players help the sleepers
     public static boolean watchEnabled = true;

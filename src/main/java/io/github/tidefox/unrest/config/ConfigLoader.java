@@ -177,7 +177,12 @@ public final class ConfigLoader {
         UnrestConfig.reaperSeconds = cfg.getInt("seconds", REAPER, 60, 5, 3600, "How long the Reaper hunts before it fades");
         UnrestConfig.reaperReward = d(REAPER, "reward", 0.20, 0.0, 1.0, "Meter added when a player kills the Reaper");
         UnrestConfig.reaperPenalty = d(REAPER, "penalty", 0.05, 0.0, 1.0, "Meter lost when the Reaper fades unkilled");
-        UnrestConfig.reaperHealth = d(REAPER, "health", 30.0, 1.0, 1024.0, "The Reaper's health (a wither skeleton has 20)");
+        UnrestConfig.reaperHealth = d(REAPER, "health", 30.0, 0.0, 1024.0,
+                "The Reaper's health (a wither skeleton has 20). 0 keeps the mob's own health");
+        UnrestConfig.reaperEntity = cfg.getString("entity", REAPER, "minecraft:wither_skeleton",
+                "Registry name of the mob sent as the Reaper, e.g. lycanitesmobs:reaper with Lycanites Mobs installed."
+                        + " Falls back to a wither skeleton if the mob isn't installed. Only the wither skeleton gets"
+                        + " the hoe and skull").trim();
 
         UnrestConfig.watchEnabled = cfg.getBoolean("enabled", WATCH, true,
                 "While someone sleeps, awake players bring the dawn closer by keeping watch: killing hostile mobs,"
