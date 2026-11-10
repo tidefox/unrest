@@ -1,10 +1,11 @@
 package io.github.tidefox.unrest.core;
 
 import io.github.tidefox.unrest.config.UnrestConfig;
+import net.minecraft.world.World;
 
 /**
  * The vanilla moon phase and what it does to the night's dreams (DESIGN.md §3.3).
- * Phase 0 is the full moon, 4 the new moon, as {@code World.getMoonPhase()} returns.
+ * Phase 0 is the full moon, 4 the new moon, as {@link #phase(World)} returns.
  */
 public final class Moon {
 
@@ -17,6 +18,18 @@ public final class Moon {
     private static final double[] CHAOS = {1.0, 0.5, 0.0, -0.5, -1.0, -0.5, 0.0, 0.5};
 
     private Moon() {}
+
+    /**
+     * The world's moon phase, 0 to 7.
+     *
+     * <p>Use this instead of {@code World.getMoonPhase()}: that method is
+     * client-only and is missing from the dedicated server jar, so calling it
+     * there throws {@code NoSuchMethodError}. The provider's method is what
+     * vanilla uses on both sides.
+     */
+    public static int phase(World world) {
+        return world.provider.getMoonPhase(world.getWorldTime());
+    }
 
     private static int index(int phase) {
         return ((phase % 8) + 8) % 8;

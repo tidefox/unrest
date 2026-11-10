@@ -3,6 +3,7 @@ package io.github.tidefox.unrest.display;
 import io.github.tidefox.unrest.config.UnrestConfig;
 import io.github.tidefox.unrest.core.NightType;
 import net.minecraft.entity.player.EntityPlayerMP;
+import net.minecraft.network.play.server.SPacketUpdateBossInfo;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraft.world.BossInfo;
 import net.minecraft.world.BossInfoServer;
@@ -15,8 +16,7 @@ import java.util.Set;
 /** The sleep meter bossbar (DESIGN.md §7). */
 public final class BossbarDisplay {
 
-    private final BossInfoServer bar = new BossInfoServer(new TextComponentString(""),
-            BossInfo.Color.BLUE, BossInfo.Overlay.NOTCHED_10);
+    private final Bar bar = new Bar();
     private String lastText = "";
 
     public void show(List<EntityPlayerMP> viewers, NightType type, List<EntityPlayerMP> sleepers, float progress) {
@@ -37,7 +37,7 @@ public final class BossbarDisplay {
         }
         BossInfo.Color color = type == NightType.FEVER && flash ? BossInfo.Color.PINK : color(type);
         if (bar.getColor() != color) {
-            bar.setColor(color);
+            bar.recolor(color);
         }
         bar.setPercent(pct);
 
@@ -57,6 +57,29 @@ public final class BossbarDisplay {
     public void hide() {
         for (EntityPlayerMP p : new ArrayList<>(bar.getPlayers())) {
             bar.removePlayer(p);
+        }
+    }
+
+    /**
+     * {@code BossInfo.setColor} is client-only: it is missing from the dedicated
+     * server jar, so calling it there throws {@code NoSuchMethodError}. The
+     * colour field is protected and the style packet is in the server jar, so
+     * the bar sets the field and sends the update itself, as vanilla's
+     * {@code BossInfoServer} does for its other setters.
+     */
+    private static final class Bar extends BossInfoServer {
+        Bar() {
+            super(new TextComponentString(""), BossInfo.Color.BLUE, BossInfo.Overlay.NOTCHED_10);
+        }
+
+        void recolor(BossInfo.Color c) {
+            // The bar is never hidden with setVisible(false) (hide() removes the
+            // players instead), so unlike vanilla there's no visibility check.
+            color = c;
+            SPacketUpdateBossInfo packet = new SPacketUpdateBossInfo(SPacketUpdateBossInfo.Operation.UPDATE_STYLE, this);
+            for (EntityPlayerMP p : getPlayers()) {
+                p.connection.sendPacket(packet);
+            }
         }
     }
 
