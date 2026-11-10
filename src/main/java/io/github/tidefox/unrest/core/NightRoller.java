@@ -10,4 +10,9 @@ public final class NightRoller {
     public static NightType roll(double debt, Random rand) {
         return SleepMath.rollNight(debt, rand);
     }
+
+    /** Rolls with the moon: a full moon makes a Fever Dream likelier (§3.3). */
+    public static NightType roll(double debt, int moonPhase, Random rand) {
+        return SleepMath.rollNight(debt, moonPhase, rand);
+    }
 }

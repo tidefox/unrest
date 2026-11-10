@@ -21,7 +21,7 @@ public final class Unrest {
 
     public static final String MODID = "unrest";
     public static final String NAME = "Unrest";
-    public static final String VERSION = "1.0.0";
+    public static final String VERSION = "1.1.0";
 
     public static final Logger LOG = LogManager.getLogger(NAME);
 

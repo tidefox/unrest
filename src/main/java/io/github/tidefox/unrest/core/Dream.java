@@ -1,20 +1,52 @@
 package io.github.tidefox.unrest.core;
 
-/** The result of one dream roll for one sleeper (DESIGN.md §4). */
+import io.github.tidefox.unrest.config.UnrestConfig;
+
+/** The result of the sleepers' shared dream roll (DESIGN.md §4). */
 public enum Dream {
-    NORMAL(1.0),
-    DEEP(2.0),
-    RESTLESS(0.0),
-    NIGHTMARE(0.0);
+    NORMAL("Sound sleep"),
+    DEEP("Deep sleep"),
+    RESTLESS("Restless sleep"),
+    NIGHTMARE("Nightmare");
 
-    private final double weight;
+    private final String label;
 
-    Dream(double weight) {
-        this.weight = weight;
+    Dream(String label) {
+        this.label = label;
     }
 
-    /** How much this sleeper counts towards the meter until the next roll. */
+    /** How much each sleeper counts towards the meter until the next roll. */
     public double weight() {
-        return weight;
+        switch (this) {
+            case DEEP:
+                return UnrestConfig.deepWeight;
+            case RESTLESS:
+                return UnrestConfig.restlessWeight;
+            default:
+                return 1.0;
+        }
+    }
+
+    /** Short name shown in the head menu and in chat hovers. */
+    public String label() {
+        return label;
+    }
+
+    /** What the dream does to the meter, for chat. */
+    public String effect() {
+        switch (this) {
+            case DEEP:
+                return "every sleeper counts " + fmt(UnrestConfig.deepWeight) + "x";
+            case RESTLESS:
+                return "every sleeper counts " + fmt(UnrestConfig.restlessWeight) + "x";
+            case NIGHTMARE:
+                return "dawn \u2212" + Math.round(UnrestConfig.nightmareMeterLoss * 100) + "%, the unluckiest sleeper wakes";
+            default:
+                return "every sleeper counts 1x";
+        }
+    }
+
+    private static String fmt(double v) {
+        return v == Math.rint(v) ? Long.toString((long) v) : Double.toString(v);
     }
 }

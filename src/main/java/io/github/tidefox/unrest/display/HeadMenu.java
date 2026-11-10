@@ -1,6 +1,7 @@
 package io.github.tidefox.unrest.display;
 
 import io.github.tidefox.unrest.config.UnrestConfig;
+import io.github.tidefox.unrest.core.Dream;
 import io.github.tidefox.unrest.core.SleepMath;
 import io.github.tidefox.unrest.core.SleepTracker;
 import io.github.tidefox.unrest.core.SleepTracker.Status;
@@ -69,7 +70,8 @@ public final class HeadMenu {
         inv.setInventorySlotContents(4, item(Items.DYE, debtDye(debt), "Unrest",
                 dots(debt) + String.format(" %.2f", debt)));
         inv.setInventorySlotContents(6, item(Items.PAPER, 0, "Sleepers",
-                census.sleepers.size() + " / " + census.counted.size(),
+                census.sleepers.size() + " / " + census.n()
+                        + (census.leavers.isEmpty() ? "" : " (" + census.leavers.size() + " left, still counted)"),
                 "Preset: " + tracker.presetName(world),
                 "Mode: " + UnrestConfig.mode.id()));
 
@@ -110,7 +112,9 @@ public final class HeadMenu {
         switch (s) {
             case SLEEPING:
                 String zz = UnrestConfig.asciiOnly ? "Zz" : "💤";
-                return zz + " Sleeping " + SleepMath.formatDuration(tracker.activity().millisInBed(p) / 1000.0);
+                String line = zz + " Sleeping " + SleepMath.formatDuration(tracker.activity().millisInBed(p) / 1000.0);
+                Dream dream = tracker.dreamOf(p.getUniqueID());
+                return dream == null ? line : line + (UnrestConfig.asciiOnly ? " - " : " · ") + dream.label();
             case IN_BED:
                 return "In bed";
             case AFK:

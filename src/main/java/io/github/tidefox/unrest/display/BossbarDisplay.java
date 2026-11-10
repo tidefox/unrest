@@ -20,13 +20,22 @@ public final class BossbarDisplay {
     private String lastText = "";
 
     public void show(List<EntityPlayerMP> viewers, NightType type, List<EntityPlayerMP> sleepers, float progress) {
+        show(viewers, type, sleepers, progress, UnrestConfig.moon(), "", false);
+    }
+
+    /**
+     * Shows the bar with the moon symbol, any momentum extras ("⚡3 ⛓×2") and,
+     * on a Fever Dream, a colour that flashes each second.
+     */
+    public void show(List<EntityPlayerMP> viewers, NightType type, List<EntityPlayerMP> sleepers, float progress,
+                     String moon, String extras, boolean flash) {
         float pct = Math.max(0f, Math.min(1f, progress));
-        String text = text(type, sleepers, pct);
+        String text = text(moon, type, sleepers, pct, extras);
         if (!text.equals(lastText)) {
             lastText = text;
             bar.setName(new TextComponentString(text));
         }
-        BossInfo.Color color = color(type);
+        BossInfo.Color color = type == NightType.FEVER && flash ? BossInfo.Color.PINK : color(type);
         if (bar.getColor() != color) {
             bar.setColor(color);
         }
@@ -51,13 +60,16 @@ public final class BossbarDisplay {
         }
     }
 
-    static String text(NightType type, List<EntityPlayerMP> sleepers, float pct) {
+    static String text(String moon, NightType type, List<EntityPlayerMP> sleepers, float pct, String extras) {
         StringBuilder sb = new StringBuilder();
-        sb.append(UnrestConfig.moon()).append(' ').append(type.displayName());
+        sb.append(moon).append(' ').append(type.displayName());
         if (!sleepers.isEmpty()) {
             sb.append(" — ").append(ChatDisplay.names(sleepers, UnrestConfig.bossbarMaxNames)).append(" asleep");
         }
         sb.append(" — ").append(Math.round(pct * 100)).append('%');
+        if (extras != null && !extras.isEmpty()) {
+            sb.append("  ").append(extras);
+        }
         return sb.toString();
     }
 
@@ -69,6 +81,8 @@ public final class BossbarDisplay {
                 return BossInfo.Color.YELLOW;
             case HAUNTED:
                 return BossInfo.Color.RED;
+            case FEVER:
+                return BossInfo.Color.PURPLE;
             default:
                 return BossInfo.Color.BLUE;
         }
