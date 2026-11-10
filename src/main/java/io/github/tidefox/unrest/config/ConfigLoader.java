@@ -226,6 +226,9 @@ public final class ConfigLoader {
         UnrestConfig.actionbarIntervalSeconds = cfg.getInt("actionbarIntervalSeconds", INDICATORS, 5, 1, 3600, "");
         UnrestConfig.tabList = cfg.getBoolean("tabList", INDICATORS, true, "");
         UnrestConfig.tabPrefix = cfg.getString("tabPrefix", INDICATORS, "§7[Zz]§r", "Shown before sleepers' names in the tab list");
+        UnrestConfig.tabAfk = cfg.getBoolean("tabAfk", INDICATORS, true,
+                "Tag AFK players in the tab list, day or night (idle for afk.timeoutSeconds, not in bed)");
+        UnrestConfig.tabAfkPrefix = cfg.getString("tabAfkPrefix", INDICATORS, "§8[AFK]§r", "Shown before AFK players' names in the tab list");
         UnrestConfig.particles = cfg.getBoolean("particles", INDICATORS, true, "");
         UnrestConfig.sounds = cfg.getBoolean("sounds", INDICATORS, true, "");
         UnrestConfig.asciiOnly = cfg.getBoolean("asciiOnly", INDICATORS, false, "Replace the moon and sun symbols with text");

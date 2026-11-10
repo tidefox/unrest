@@ -132,6 +132,7 @@ public final class SleepTracker {
 
     private Census census = new Census();
     private Set<UUID> shownSleepers = new HashSet<>();
+    private Set<UUID> shownAfk = new HashSet<>();
     private final Set<UUID> quietWake = new HashSet<>();
     private Night night;
     private long concludedDay = -1;
@@ -248,8 +249,10 @@ public final class SleepTracker {
     public void shutdown() {
         bossbar.hide();
         reaper.remove();
-        Set<UUID> old = shownSleepers;
+        Set<UUID> old = new HashSet<>(shownSleepers);
+        old.addAll(shownAfk);
         shownSleepers = new HashSet<>();
+        shownAfk = new HashSet<>();
         refreshTabList(old);
     }
 
@@ -573,7 +576,7 @@ public final class SleepTracker {
         watchShownUntil.clear();
     }
 
-    // ---- sleepers shown in chat and the tab list ----
+    // ---- sleepers shown in chat and the tab list, AFK players in the tab list ----
 
     private void updateShownSleepers(WorldServer world, boolean show) {
         Set<UUID> now = new HashSet<>();
@@ -583,20 +586,41 @@ public final class SleepTracker {
             }
         }
         Set<UUID> online = new HashSet<>();
+        Set<UUID> afkNow = new HashSet<>();
         for (EntityPlayerMP p : server.getPlayerList().getPlayers()) {
             online.add(p.getUniqueID());
+            if (UnrestConfig.enabled && UnrestConfig.tabAfk && activity.isAfk(p)) {
+                afkNow.add(p.getUniqueID());
+            }
         }
         boolean joined = !lastOnline.containsAll(online);
         lastOnline = online;
+        Set<UUID> changed = new HashSet<>();
+        if (!afkNow.equals(shownAfk)) {
+            for (UUID id : afkNow) {
+                if (!shownAfk.contains(id)) {
+                    changed.add(id);
+                }
+            }
+            for (UUID id : shownAfk) {
+                if (!afkNow.contains(id)) {
+                    changed.add(id);
+                }
+            }
+            shownAfk = afkNow;
+        }
+        if (joined) {
+            // Someone new joined: their client hasn't seen the tags yet.
+            changed.addAll(shownAfk);
+        }
         if (now.equals(shownSleepers)) {
             quietWake.clear();
             if (joined) {
-                // Someone new joined: their client hasn't seen the tags yet.
-                refreshTabList(shownSleepers);
+                changed.addAll(shownSleepers);
             }
+            refreshTabList(changed);
             return;
         }
-        Set<UUID> changed = new HashSet<>();
         int s = census.sleepers.size();
         int n = census.n();
         for (EntityPlayerMP p : census.sleepers) {
@@ -633,7 +657,7 @@ public final class SleepTracker {
                 players.add(p);
             }
         }
-        TabListDisplay.update(server, players, shownSleepers);
+        TabListDisplay.update(server, players, shownSleepers, shownAfk);
     }
 
     // ---- the meter ----

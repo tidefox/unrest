@@ -16,7 +16,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * The [Zz] tag before sleepers' names in the tab list (DESIGN.md §7).
+ * The [Zz] tag before sleepers' names in the tab list (DESIGN.md §7), and
+ * the [AFK] tag before AFK players' names. A sleeper is never AFK, but if a
+ * player were in both sets the sleeper tag wins.
  *
  * <p>Forge 14.23.5 has no tab-list name event, so this sends the vanilla
  * "update display name" player-list packet directly. Players without the tag
@@ -27,7 +29,8 @@ public final class TabListDisplay {
     private TabListDisplay() {}
 
     /** Sends the tab-list name of each of {@code players} to everyone online. */
-    public static void update(MinecraftServer server, Collection<EntityPlayerMP> players, Set<UUID> sleepers) {
+    public static void update(MinecraftServer server, Collection<EntityPlayerMP> players,
+                              Set<UUID> sleepers, Set<UUID> afk) {
         if (players.isEmpty()) {
             return;
         }
@@ -36,10 +39,15 @@ public final class TabListDisplay {
         buf.writeVarInt(players.size());
         for (EntityPlayerMP p : players) {
             buf.writeUniqueId(p.getUniqueID());
-            boolean tagged = UnrestConfig.tabList && sleepers.contains(p.getUniqueID());
-            buf.writeBoolean(tagged);
-            if (tagged) {
-                String prefix = UnrestConfig.tabPrefix.isEmpty() ? "" : UnrestConfig.tabPrefix + " ";
+            String tag = null;
+            if (UnrestConfig.tabList && sleepers.contains(p.getUniqueID())) {
+                tag = UnrestConfig.tabPrefix;
+            } else if (UnrestConfig.tabAfk && afk.contains(p.getUniqueID())) {
+                tag = UnrestConfig.tabAfkPrefix;
+            }
+            buf.writeBoolean(tag != null);
+            if (tag != null) {
+                String prefix = tag.isEmpty() ? "" : tag + " ";
                 buf.writeTextComponent(new TextComponentString(
                         prefix + ScorePlayerTeam.formatPlayerName(p.getTeam(), p.getName())));
             }
