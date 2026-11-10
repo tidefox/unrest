@@ -371,6 +371,10 @@ lightning:
 
 A wither skeleton's hits inflict Wither, so on a hardcore world the Reaper
 is a real threat. `reaper.enabled = false` turns it off.
+`reaper.entity` swaps in another mob by registry name (e.g.
+`lycanitesmobs:reaper`); it keeps the name, tag, glow, speed and hunt, but
+not the hoe and skull. An unknown name falls back to the wither skeleton.
+`reaper.health = 0` keeps the mob's own health.
 
 ---
 
@@ -576,6 +580,7 @@ moon {
 reaper {
     B:enabled=true        I:seconds=60            D:reward=0.20
     D:penalty=0.05        D:health=30.0
+    S:entity=minecraft:wither_skeleton
 }
 commands {
     B:registerSleepAlias=true

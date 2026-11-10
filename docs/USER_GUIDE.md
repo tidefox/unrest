@@ -476,7 +476,8 @@ For each of `calm`, `normal`, `restless`, `haunted` and `fever`:
 | `seconds` | `60` | How long it hunts before it fades |
 | `reward` | `0.20` | Meter added when a player kills it |
 | `penalty` | `0.05` | Meter lost when it fades unkilled |
-| `health` | `30.0` | Its health |
+| `health` | `30.0` | Its health (`0` keeps the mob's own health) |
+| `entity` | `minecraft:wither_skeleton` | The mob sent as the Reaper, by registry name, e.g. `lycanitesmobs:reaper` with Lycanites Mobs installed. Falls back to a wither skeleton if that mob isn't installed. Only the wither skeleton gets the hoe and skull |
 
 ### nightWatch
 
