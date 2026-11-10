@@ -127,6 +127,8 @@ public final class SleepTracker {
     private boolean flash;
     private Field allPlayersSleeping;
     private boolean vanillaBlockFailed;
+    /** Set once a world tick has failed; Unrest then stays out of the way. */
+    private boolean tickFailed;
     private final BossbarDisplay bossbar = new BossbarDisplay();
     private final Random rand = new Random();
 
@@ -255,11 +257,33 @@ public final class SleepTracker {
 
     // ---- ticking ----
 
+    /**
+     * Ticks the tracker, so that a bug or a clash with another mod can't take
+     * the server down. {@code NoSuchMethodError} and its kin are
+     * {@code LinkageError}s, not {@code Exception}s, so both are caught. The
+     * first failure is logged and Unrest stops ticking until the server
+     * restarts: vanilla sleep carries on, and the log isn't flooded every tick.
+     */
     @SubscribeEvent
     public void onWorldTick(TickEvent.WorldTickEvent e) {
-        if (e.side != Side.SERVER || e.world.provider.getDimension() != 0) {
+        if (tickFailed || e.side != Side.SERVER || e.world.provider.getDimension() != 0) {
             return;
         }
+        try {
+            worldTick(e);
+        } catch (Exception | LinkageError ex) {
+            tickFailed = true;
+            Unrest.LOG.error("Unrest hit an error on the world tick and has stopped until the server restarts;"
+                    + " vanilla sleep still works. Please report this.", ex);
+            try {
+                shutdown();
+            } catch (Exception | LinkageError ignored) {
+                // Already failing; the first error is the one that matters.
+            }
+        }
+    }
+
+    private void worldTick(TickEvent.WorldTickEvent e) {
         WorldServer world = (WorldServer) e.world;
         if (e.phase == TickEvent.Phase.START) {
             timeAtTickStart = world.getWorldTime();
@@ -518,7 +542,7 @@ public final class SleepTracker {
 
     private void beginNight(WorldServer world, UnrestWorldData data, long day, long tod, boolean active) {
         NightType saved = data.getNightType(day);
-        NightType type = saved != null ? saved : NightRoller.roll(data.getDebt(), world.getMoonPhase(), rand);
+        NightType type = saved != null ? saved : NightRoller.roll(data.getDebt(), Moon.phase(world), rand);
         night = new Night(type, day, false, data.getDebt());
         resetMeterState();
         if (saved != null) {
@@ -531,7 +555,7 @@ public final class SleepTracker {
         if (active && type == NightType.FEVER) {
             // A Fever Dream is rare and loud: always announced, with thunder.
             if (UnrestConfig.chat) {
-                ChatDisplay.feverDream(world, Moon.name(world.getMoonPhase()));
+                ChatDisplay.feverDream(world, Moon.name(Moon.phase(world)));
             }
             ParticleDisplay.lightningNear(world, overworldPlayers(world), rand);
         } else if (active && UnrestConfig.chat && UnrestConfig.announceNight) {
@@ -732,7 +756,7 @@ public final class SleepTracker {
         boolean fever = night.type == NightType.FEVER;
         secondsUntilRoll = SleepMath.rollInterval(fever, rand);
         double rubber = SleepMath.rubberLuck(data.getMeter(), rampSeconds);
-        double chaos = Moon.chaos(world.getMoonPhase());
+        double chaos = Moon.chaos(Moon.phase(world));
         DreamRoller.Roll roll = dreams.roll(census.sleepers, r, data.getDebt(), rubber, chaos, fever, rand);
         if (roll == null) {
             return;
@@ -870,7 +894,7 @@ public final class SleepTracker {
         if (visible) {
             flash = !flash;
             bossbar.show(census.counted, night.type, census.sleepers, progress,
-                    Moon.symbol(world.getMoonPhase()), bossbarExtras(), flash);
+                    Moon.symbol(Moon.phase(world)), bossbarExtras(), flash);
         } else {
             bossbar.hide();
         }

@@ -139,7 +139,7 @@ public final class UnrestCommand extends CommandBase {
                     ChatDisplay.nightColor(night.type)));
         }
         reply(sender, "Meter: " + Math.round(meter * 100) + "%");
-        int phase = world.getMoonPhase();
+        int phase = Moon.phase(world);
         reply(sender, Moon.symbol(phase) + " " + Moon.name(phase) + ": dreams are " + Moon.mood(phase));
         Momentum m = tracker.momentum();
         if (m.tension() > 0 || m.chain() > 0) {
