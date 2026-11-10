@@ -181,6 +181,9 @@ public final class UnrestConfig {
     public static int actionbarIntervalSeconds = 5;
     public static boolean tabList = true;
     public static String tabPrefix = "§7[Zz]§r";
+    /** Tag AFK players (afk.timeoutSeconds idle, not in bed) in the tab list, day or night. */
+    public static boolean tabAfk = true;
+    public static String tabAfkPrefix = "§8[AFK]§r";
     public static boolean particles = true;
     public static boolean sounds = true;
     public static boolean asciiOnly = false;

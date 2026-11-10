@@ -328,7 +328,7 @@ All of these use normal vanilla features, so they work on unmodded clients.
 | **Bossbar** | `🌙 Restless Night — Steve, Alex +2 asleep — 42%`. Shown while anyone is in bed. Green on Calm, blue on Normal, yellow on Restless, red on Haunted. |
 | **Chat** | `Steve lies down (3/7) — dawn in ~1:20`. Hover over it to see who's asleep and who's awake. Also dreams (`💭 Steve sinks into a deep sleep.`), Nightmares, and `☀ The night passes. (3/7 asleep, Restless Night, 1:42)`. |
 | **Actionbar** | Awake players see `3 players are waiting for you to sleep — or keep watch: fight, mine, explore` every 5 seconds. Nobody is named. Right after a watch deed they see what it added instead. |
-| **Tab list** | `[Zz]` before the names of sleepers. |
+| **Tab list** | `[Zz]` before the names of sleepers, `[AFK]` before AFK players. |
 | **Particles** | A small cloud above each sleeper. |
 | **Sounds** | A chime at 50% and at 90%. |
 | **`/unrest` menu** | A chest screen with every online player's head (see below). |
@@ -528,6 +528,8 @@ For each of `calm`, `normal`, `restless`, `haunted` and `fever`:
 | `actionbarIntervalSeconds` | `5` | How often the nudge is shown |
 | `tabList` | `true` | The `[Zz]` tag |
 | `tabPrefix` | `§7[Zz]§r` | The tag text (`§` colour codes allowed) |
+| `tabAfk` | `true` | The `[AFK]` tag before AFK players' names, day or night |
+| `tabAfkPrefix` | `§8[AFK]§r` | The AFK tag text (`§` colour codes allowed) |
 | `particles` | `true` | Cloud puffs above sleepers |
 | `sounds` | `true` | Chimes at 50% and 90% |
 | `asciiOnly` | `false` | Replace 🌙 ☀ 💤 💭 ● 🎲 and the moon phases with plain text |

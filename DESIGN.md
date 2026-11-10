@@ -454,7 +454,7 @@ last-activity time is kept in memory only.
 | **Actionbar** | Counted players who are awake, every 5s while S ≥ 1 | `3 players are waiting for you to sleep`. It doesn't name anyone. |
 | **Titles** | Sleepers (`dreams.spin`), everyone for double or nothing | The roll spin and reveal (§4.1), the double-or-nothing countdown and flip (§4.3) |
 | **Thunder** | Players within 512 blocks | Harmless lightning for jackpots, the Reaper and Fever Dreams (`indicators.lightning`) |
-| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names, sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
+| **Tab list** | Everyone | `[Zz] ` in gray before sleepers' names and `[AFK] ` in dark gray before AFK players' names (day or night), sent as a vanilla player-list display-name update (Forge 14.23.5 has no tab-list name event). No scoreboard teams are used. |
 | **Particles** | Nearby players | A small cloud puff above each sleeper every 2s (`WorldServer.spawnParticle`). |
 | **Sound** | Overworld players | A soft chime when the meter passes 50 % and 90 %. |
 
@@ -568,6 +568,7 @@ indicators {
     B:chat=true           B:announceNight=false
     B:actionbar=true        I:actionbarIntervalSeconds=5
     B:tabList=true        S:tabPrefix=§7[Zz]§r
+    B:tabAfk=true         S:tabAfkPrefix=§8[AFK]§r
     B:particles=true      B:sounds=true           B:asciiOnly=false
     B:lightning=true
 }

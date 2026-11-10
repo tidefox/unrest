@@ -25,7 +25,7 @@ asleep builds **Unrest**, which makes later nights harder to skip.
 - **Sleeping costs food.** Sleepers wake hungrier the more hours the skip covered. A skip never takes anyone below 3 food points.
 - **AFK-aware.** AFK players don't count against the skip, and sleepers must have been active just before getting into bed.
 - **No dodging.** An awake player who logs out or hops to the Nether at night keeps counting as awake until they would have gone AFK, so leaving never speeds up the skip.
-- **Shows who's asleep,** using only vanilla displays: a bossbar, chat messages, an actionbar nudge, a `[Zz]` tag in the tab list, particles, and an `/unrest` menu showing every player's head and status.
+- **Shows who's asleep,** using only vanilla displays: a bossbar, chat messages, an actionbar nudge, `[Zz]` and `[AFK]` tags in the tab list, particles, and an `/unrest` menu showing every player's head and status.
 - **A/B ready.** `observe` mode leaves vanilla sleep unchanged but logs every night to CSV, so you can compare it with `active` mode on a live server.
 
 ## Requirements
